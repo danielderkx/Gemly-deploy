@@ -1,4 +1,3 @@
-"use client"
 import { useState, useRef, useEffect } from "react";
 
 const getContinent = c => ({ EU:"Europe", NA:"North America", SA:"South America", AS:"Asia", AF:"Africa", OC:"Oceania" }[c] || "your continent");
@@ -245,7 +244,7 @@ export default function App() {
   const identifyImage = async (base64, mediaType) => {
     setStep("identifying"); setError("");
     try {
-      const r = await fetch("https://api.anthropic.com/v1/messages", {
+      const r = await fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
           model:"claude-sonnet-4-20250514", max_tokens:300,
@@ -294,7 +293,7 @@ export default function App() {
   const fetchPriceEst = async name => {
     setPriceEstLoading(true); setPriceEst(null);
     try {
-      const r = await fetch("https://api.anthropic.com/v1/messages", {
+      const r = await fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
           model:"claude-sonnet-4-20250514", max_tokens:200,
@@ -350,7 +349,7 @@ export default function App() {
 
     // Run both searches in parallel
     const [listingRes, shopRes] = await Promise.allSettled([
-      fetch("https://api.anthropic.com/v1/messages", {
+      fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
           model:"claude-sonnet-4-20250514", max_tokens:1500,
@@ -358,7 +357,7 @@ export default function App() {
           messages:[{ role:"user", content: listingPrompt }]
         }),
       }).then(r=>r.json()),
-      fetch("https://api.anthropic.com/v1/messages", {
+      fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
           model:"claude-sonnet-4-20250514", max_tokens:800,
