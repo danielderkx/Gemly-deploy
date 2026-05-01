@@ -13,7 +13,9 @@ export async function POST(request) {
     });
 
     const data = await response.json();
-    return Response.json(data);
+
+    // Pass through the real status code
+    return Response.json(data, { status: response.status });
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
