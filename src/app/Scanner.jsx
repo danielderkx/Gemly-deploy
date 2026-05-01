@@ -250,7 +250,7 @@ export default function App() {
           model:"claude-sonnet-4-20250514", max_tokens:300,
           messages:[{ role:"user", content:[
             { type:"image", source:{ type:"base64", media_type:mediaType, data:base64 } },
-            { type:"text", text:'Identify the item. Reply ONLY with JSON (no markdown):\n{"name":"brand + item in 5-8 words","searchQuery":"3-5 exact search keywords","similarQuery":"3-4 generic keywords without brand","needsSize":false,"cat":null}\ncat: tops/bottoms/dresses/shoes/kids/watches/jewelry or null\nneedsSize: true only for clothing/shoes' }
+            { type:"text", text:'What item is in this image? Reply with ONLY a JSON object and nothing else. Example format: {\"name\":\"Nike Air Max 90 sneakers\",\"searchQuery\":\"Nike Air Max 90\",\"similarQuery\":\"white sneakers\",\"needsSize\":true,\"cat\":\"shoes\"}. Replace the values with what you actually see. cat must be: tops, bottoms, dresses, shoes, kids, watches, jewelry, or null. needsSize true only for clothing/shoes.' }
           ]}]
         }),
       });
