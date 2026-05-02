@@ -5,7 +5,6 @@ const getContinent = c => ({ EU:"Europe", NA:"North America", SA:"South America"
 const getFlag = c => !c ? "🌍" : c.toUpperCase().replace(/./g, x => String.fromCodePoint(x.charCodeAt(0)+127397));
 const getCurrency = cc => ({ GB:"£", US:"$", CA:"CA$", AU:"AU$", CH:"CHF", JP:"¥" }[cc] || "€");
 
-// Platforms per condition/location — used in search prompt
 const getSearchPlatforms = (condition, cc, radius, cont, category) => {
   if (category === "watches") return "Chrono24, Watchfinder, eBay, Catawiki";
   if (category === "jewelry") return "Etsy, eBay, Vestiaire Collective, Depop";
@@ -23,7 +22,6 @@ const getSearchPlatforms = (condition, cc, radius, cont, category) => {
     }
     return "Farfetch, Net-a-Porter, Mytheresa, SSENSE, Nordstrom, ASOS, Selfridges";
   }
-  // second-hand
   if (radius === "country") {
     if (cc==="NL") return "Marktplaats, Vinted NL (vinted.nl), 2dehands, eBay NL, Vestiaire Collective";
     if (cc==="GB") return "eBay UK (ebay.co.uk), Vinted UK (vinted.co.uk), Depop, Vestiaire Collective";
@@ -120,8 +118,6 @@ const S = `
   .sec-title { display:flex; align-items:center; gap:8px; margin:1.25rem 0 .85rem; }
   .sec-title span { font-size:10px; color:#2C2417; letter-spacing:.18em; text-transform:uppercase; font-weight:700; white-space:nowrap; }
   .sec-title::after { content:''; flex:1; height:1px; background:#EDE8DF; }
-
-  /* Listing result cards */
   .listing-card { background:#FFF; border:1px solid #EDE8DF; border-radius:16px; padding:1.25rem 1.4rem; margin-bottom:.85rem; transition:all .2s; position:relative; overflow:hidden; }
   .listing-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:#C4924A; transform:scaleY(0); transform-origin:bottom; transition:transform .25s; }
   .listing-card:hover { border-color:#D9C9AE; box-shadow:0 4px 18px rgba(196,146,74,.1); transform:translateY(-1px); }
@@ -133,8 +129,6 @@ const S = `
   .listing-btn:hover { background:#C4924A; }
   .tag { display:inline-block; background:#F4EFE8; color:#8C7A63; font-size:10px; font-weight:600; padding:3px 9px; border-radius:5px; margin-right:5px; margin-top:3px; letter-spacing:.07em; text-transform:uppercase; }
   .tag.g { background:#EEF4EF; color:#5A8060; }
-
-  /* Shop cards */
   .shop-card { background:#FFF; border:1px solid #EDE8DF; border-radius:14px; padding:1.1rem 1.25rem; margin-bottom:.7rem; position:relative; overflow:hidden; transition:all .2s; }
   .shop-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:#7A9E7E; transform:scaleY(0); transform-origin:bottom; transition:transform .25s; }
   .shop-card:hover { border-color:#B8CDB9; box-shadow:0 4px 20px rgba(122,158,126,.08); }
@@ -142,7 +136,6 @@ const S = `
   .shop-num { font-family:'Playfair Display',serif; font-size:26px; font-weight:400; font-style:italic; color:#7A9E7E; opacity:.6; line-height:1; margin-right:12px; flex-shrink:0; }
   .shop-btn { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:#7A9E7E; text-transform:uppercase; letter-spacing:.07em; text-decoration:none; background:#EEF4EF; border:1px solid #C8DBC9; border-radius:7px; padding:5px 10px; margin-top:6px; }
   .shop-btn:hover { background:#E0EDDF; }
-
   .spinner-wrap { text-align:center; padding:3rem 0 2rem; }
   .spinner { width:44px; height:44px; border:2px solid #EDE8DF; border-top-color:#C4924A; border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 1.5rem; }
   @keyframes spin { to { transform:rotate(360deg); } }
@@ -171,7 +164,6 @@ const S = `
   .mtab { background:#FFF; border:1.5px solid #EDE8DF; border-radius:11px; padding:.75rem 1rem; cursor:pointer; font-family:'Nunito',sans-serif; font-size:13px; font-weight:500; color:#A89880; transition:all .2s; text-align:center; display:flex; align-items:center; justify-content:center; gap:7px; }
   .mtab:hover { border-color:#C4924A; color:#2C2417; }
   .mtab.active { border-color:#C4924A; background:linear-gradient(135deg,#FDF6EC,#FBF1E3); color:#2C2417; font-weight:600; }
-  .loading-listings { display:flex; align-items:center; gap:10px; padding:.75rem 1rem; background:#F8F6F2; border:1px solid #EDE8DF; border-radius:10px; margin-bottom:.7rem; font-size:13px; color:#A89880; }
   .no-results { background:#F8F6F2; border:1px solid #EDE8DF; border-radius:10px; padding:.85rem 1rem; font-size:12px; color:#A89880; margin-bottom:.7rem; line-height:1.5; }
 `;
 
@@ -182,13 +174,11 @@ export default function App() {
   const [imageData, setImageData] = useState(null);
   const [imageBase64, setImageBase64] = useState(null);
   const [imageMediaType, setImageMediaType] = useState("image/jpeg");
-
   const [identifiedItem, setIdentifiedItem] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [similarQuery, setSimilarQuery] = useState("");
   const [itemCategory, setItemCategory] = useState(null);
   const [sizeRelevant, setSizeRelevant] = useState(false);
-
   const [matchType, setMatchType] = useState(null);
   const [sizeCat, setSizeCat] = useState(null);
   const [selectedSize, setSelectedSize] = useState(null);
@@ -198,20 +188,15 @@ export default function App() {
   const [priceMin, setPriceMin] = useState("");
   const [priceMax, setPriceMax] = useState("");
   const [radius, setRadius] = useState(null);
-
   const [userLocation, setUserLocation] = useState(null);
   const [locLoading, setLocLoading] = useState(false);
-
-  // Results
-  const [listings, setListings] = useState([]);     // 3 direct listing results
-  const [shopResults, setShopResults] = useState([]); // physical shops
-
+  const [listings, setListings] = useState([]);
+  const [shopResults, setShopResults] = useState([]);
   const [error, setError] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const [priceEst, setPriceEst] = useState(null);
   const [priceEstLoading, setPriceEstLoading] = useState(false);
-  const [searchPhase, setSearchPhase] = useState(0); // 1=searching listings, 2=finding shops, 3=done
-
+  const [searchPhase, setSearchPhase] = useState(0);
   const fileRef = useRef();
   const camRef = useRef();
 
@@ -251,7 +236,7 @@ export default function App() {
           model:"claude-sonnet-4-5", max_tokens:300,
           messages:[{ role:"user", content:[
             { type:"image", source:{ type:"base64", media_type:mediaType, data:base64 } },
-            { type:"text", text:'What item is in this image? Reply with ONLY a JSON object and nothing else. Example format: {\"name\":\"Nike Air Max 90 sneakers\",\"searchQuery\":\"Nike Air Max 90\",\"similarQuery\":\"white sneakers\",\"needsSize\":true,\"cat\":\"shoes\"}. Replace the values with what you actually see. cat must be: tops, bottoms, dresses, shoes, kids, watches, jewelry, or null. needsSize true only for clothing/shoes.' }
+            { type:"text", text:'What item is in this image? Reply with ONLY a JSON object and nothing else. Example format: {"name":"Nike Air Max 90 sneakers","searchQuery":"Nike Air Max 90","similarQuery":"white sneakers","needsSize":true,"cat":"shoes"}. Replace the values with what you actually see. cat must be: tops, bottoms, dresses, shoes, kids, watches, jewelry, or null. needsSize true only for clothing/shoes.' }
           ]}]
         }),
       });
@@ -315,23 +300,15 @@ export default function App() {
   const handleSearch = async () => {
     setStep("searching"); setSearchPhase(1); setError("");
     setListings([]); setShopResults([]);
-
-    const locText = !userLocation ? "worldwide"
-      : radius==="country" ? userLocation.country
-      : radius==="continent" ? userLocation.continent
-      : "worldwide";
-
+    const locText = !userLocation ? "worldwide" : radius==="country" ? userLocation.country : radius==="continent" ? userLocation.continent : "worldwide";
     const condText = condition==="new" ? "brand new" : condition==="used" ? "second-hand/pre-owned" : "new or used";
     const qualText = condition==="new" ? "" : (QUALITY_OPTS.find(q=>q.val===quality)?.label || "");
     const sizeText = effSize ? "size "+effSize : "";
     const priceText = (priceMin||priceMax) ? "price "+currency+(priceMin||"0")+"-"+currency+(priceMax||"any") : "";
     const platforms = getSearchPlatforms(condition, userLocation?.countryCode, radius, userLocation?.continentCode, itemCategory);
     const shopType = condition==="new" ? "physical retail stores or boutiques" : "physical vintage, thrift or consignment stores";
-
-    // Build filters string
     const filters = [condText, qualText, sizeText, priceText].filter(Boolean).join(", ");
 
-    // SEARCH FOR REAL LISTINGS — web search to find actual product pages
     const listingPrompt =
       'Search these platforms: ' + platforms + '\n' +
       'Find 3 real listings for: "' + activeQ + '" — ' + filters + ' — location: ' + locText + '\n\n' +
@@ -348,12 +325,11 @@ export default function App() {
       'Reply ONLY with JSON:\n' +
       '{"shops":[{"name":"name","description":"1 sentence speciality","address":"city or street","url":"https://...","tip":"why this shop might have it"},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."}]}';
 
-    // Run both searches in parallel
     const [listingRes, shopRes] = await Promise.allSettled([
       fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
-          model:"claude-sonnet-4-5", max_tokens:1500,
+          model:"claude-haiku-4-5", max_tokens:1500,
           tools:[{ type:"web_search_20250305", name:"web_search" }],
           messages:[{ role:"user", content: listingPrompt }]
         }),
@@ -361,7 +337,7 @@ export default function App() {
       fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
-          model:"claude-sonnet-4-5", max_tokens:800,
+          model:"claude-haiku-4-5", max_tokens:800,
           tools:[{ type:"web_search_20250305", name:"web_search" }],
           messages:[{ role:"user", content: shopsPrompt }]
         }),
@@ -370,14 +346,11 @@ export default function App() {
 
     setSearchPhase(3);
 
-    // Parse listings
     if (listingRes.status==="fulfilled") {
       const txt = (listingRes.value.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
       const p = parseJSON(txt);
       if (p?.listings?.length) setListings(p.listings.slice(0,3));
     }
-
-    // Parse shops
     if (shopRes.status==="fulfilled") {
       const txt = (shopRes.value.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
       const p = parseJSON(txt);
@@ -457,7 +430,6 @@ export default function App() {
         {currentIdx>=0&&<div className="progress-row">{STEP_ORDER.map((s,i)=><div key={s} className={"pdot "+(i<currentIdx?"done":i===currentIdx?"active":"")}/>)}</div>}
         {error&&<div className="err">{error}</div>}
 
-        {/* UPLOAD */}
         {step==="upload"&&(
           <div className="slide-in">
             {locLoading&&<div className="loc-badge"><div className="locdot"/><span style={{fontSize:12,color:"#4A6E4F"}}>Detecting your location…</span></div>}
@@ -514,7 +486,6 @@ export default function App() {
           </div>
         )}
 
-        {/* IDENTIFYING */}
         {step==="identifying"&&(
           <div className="slide-in" style={{textAlign:"center",paddingTop:"2rem"}}>
             {imageData?(
@@ -528,7 +499,6 @@ export default function App() {
           </div>
         )}
 
-        {/* MATCH TYPE */}
         {step==="match_type"&&(
           <div className="slide-in">
             <div className="id-pill">
@@ -557,14 +527,10 @@ export default function App() {
           </div>
         )}
 
-        {/* SIZE */}
         {step==="size"&&(
           <div className="slide-in">
             <Back to="match_type"/>
             <span className="lbl">Your size</span>
-            <p style={{color:"#A89880",fontSize:12,margin:"0 0 1rem",lineHeight:1.5}}>
-              {sizeCat&&SIZE_CATS[sizeCat]?"We think this is "+SIZE_CATS[sizeCat].label.toLowerCase()+" — pick your size.":"Select a category, then your size."}
-            </p>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7,marginBottom:"1rem"}}>
               {Object.entries(SIZE_CATS).map(([key,cat])=>(
                 <button key={key} className={"size-chip "+(sizeCat===key?"selected":"")}
@@ -593,7 +559,6 @@ export default function App() {
           </div>
         )}
 
-        {/* CONDITION */}
         {step==="condition"&&(
           <div className="slide-in">
             <Back to={sizeRelevant?"size":"match_type"}/>
@@ -610,12 +575,10 @@ export default function App() {
           </div>
         )}
 
-        {/* QUALITY */}
         {step==="quality"&&(
           <div className="slide-in">
             <Back to="condition"/>
             <span className="lbl">Desired condition</span>
-            <p style={{color:"#A89880",fontSize:12,margin:"0 0 1rem"}}>How well-kept should it be?</p>
             <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:"1.25rem"}}>
               {QUALITY_OPTS.map(({val,label,desc,dot})=>(
                 <button key={val} className={"choice-card "+(quality===val?"selected":"")} onClick={()=>setQuality(val)}>
@@ -633,7 +596,6 @@ export default function App() {
           </div>
         )}
 
-        {/* PRICE */}
         {step==="price"&&(
           <div className="slide-in">
             <Back to={condition==="new"?"condition":"quality"}/>
@@ -663,7 +625,6 @@ export default function App() {
           </div>
         )}
 
-        {/* LOCATION */}
         {step==="location"&&(
           <div className="slide-in">
             <Back to="price"/>
@@ -690,7 +651,6 @@ export default function App() {
           </div>
         )}
 
-        {/* SEARCHING */}
         {step==="searching"&&(
           <div className="slide-in spinner-wrap">
             <div className="spinner"/>
@@ -708,7 +668,6 @@ export default function App() {
           </div>
         )}
 
-        {/* RESULTS */}
         {step==="results"&&(
           <div className="slide-in">
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:"0.5rem"}}>
@@ -728,12 +687,8 @@ export default function App() {
               {radius&&userLocation&&<span className="tag">{locLbl()}</span>}
             </div>
             <div style={{height:1,background:"linear-gradient(90deg,#C4924A,transparent)",opacity:.3,marginBottom:"1rem"}}/>
-
-            {/* REAL LISTINGS with direct links */}
-            <div className="sec-title"><span>{condition==="new"?"Found online":"Found online"}</span></div>
-            {listings.length===0&&(
-              <div className="no-results">No listings found right now. Try adjusting your filters or broadening your location.</div>
-            )}
+            <div className="sec-title"><span>Found online</span></div>
+            {listings.length===0&&<div className="no-results">No listings found right now. Try adjusting your filters or broadening your location.</div>}
             {listings.map((item,i)=>(
               <div key={i} className="listing-card">
                 <div style={{display:"flex",alignItems:"flex-start",gap:4}}>
@@ -748,15 +703,11 @@ export default function App() {
                       {item.condition&&<span className="tag">{item.condition}</span>}
                       {item.location&&<span className="tag">{item.location}</span>}
                     </div>
-                    <a href={item.url} className="listing-btn" target="_blank" rel="noopener noreferrer">
-                      View listing →
-                    </a>
+                    <a href={item.url} className="listing-btn" target="_blank" rel="noopener noreferrer">View listing →</a>
                   </div>
                 </div>
               </div>
             ))}
-
-            {/* HIDDEN GEM SHOPS */}
             <div className="divgem"><span className="gem">{condition==="new"?"🏪":"💎"}</span></div>
             <div className="sec-title"><span>{condition==="new"?"Physical stores":"Hidden gem shops"}</span></div>
             {condition!=="new"&&shopResults.length>0&&(
@@ -765,9 +716,7 @@ export default function App() {
                 <p style={{fontSize:12,color:"#4A6E4F",margin:0,lineHeight:1.5}}>Real stores that may carry this. Call ahead — the best finds are never online.</p>
               </div>
             )}
-            {shopResults.length===0&&(
-              <div className="no-results">No local shops found. Try broadening your search radius.</div>
-            )}
+            {shopResults.length===0&&<div className="no-results">No local shops found. Try broadening your search radius.</div>}
             {shopResults.map((s,i)=>(
               <div key={i} className="shop-card">
                 <div style={{display:"flex",alignItems:"flex-start"}}>
@@ -785,7 +734,6 @@ export default function App() {
                 </div>
               </div>
             ))}
-
             <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:"1rem"}}>
               <button className="btn-ghost" onClick={()=>{setStep("location");setListings([]);setShopResults([]);}}>Adjust filters &amp; search again</button>
               <button className="rescan" style={{display:"block",textAlign:"center"}} onClick={reset}>Start a new scan</button>
@@ -796,4 +744,3 @@ export default function App() {
     </div>
   );
 }
- 
