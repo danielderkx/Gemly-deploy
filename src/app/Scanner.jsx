@@ -329,7 +329,7 @@ export default function App() {
       fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
-          model:"claude-haiku-4-5", max_tokens:1500,
+          model:"claude-sonnet-4-5", max_tokens:1500,
           tools:[{ type:"web_search_20250305", name:"web_search" }],
           messages:[{ role:"user", content: listingPrompt }]
         }),
@@ -337,7 +337,7 @@ export default function App() {
       fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
-          model:"claude-haiku-4-5", max_tokens:800,
+          model:"claude-sonnet-4-5", max_tokens:800,
           tools:[{ type:"web_search_20250305", name:"web_search" }],
           messages:[{ role:"user", content: shopsPrompt }]
         }),
