@@ -12,8 +12,10 @@ export async function POST(request) {
       body: JSON.stringify(body),
     });
     const data = await response.json();
+    console.log("Anthropic response:", JSON.stringify(data).slice(0, 500));
     return Response.json(data, { status: response.status });
   } catch (error) {
+    console.log("Error:", error.message);
     return Response.json({ error: error.message }, { status: 500 });
   }
-} 
+}
