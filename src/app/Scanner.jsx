@@ -1,3 +1,4 @@
+'use client';
 import { useState, useRef, useEffect } from "react";
 
 const getContinent = c => ({ EU:"Europe", NA:"North America", SA:"South America", AS:"Asia", AF:"Africa", OC:"Oceania" }[c] || "your continent");
