@@ -248,7 +248,7 @@ export default function App() {
       const r = await fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
-          model:"claude-3-7-sonnet-20250219", max_tokens:300,
+          model:"claude-sonnet-4-5", max_tokens:300,
           messages:[{ role:"user", content:[
             { type:"image", source:{ type:"base64", media_type:mediaType, data:base64 } },
             { type:"text", text:'What item is in this image? Reply with ONLY a JSON object and nothing else. Example format: {\"name\":\"Nike Air Max 90 sneakers\",\"searchQuery\":\"Nike Air Max 90\",\"similarQuery\":\"white sneakers\",\"needsSize\":true,\"cat\":\"shoes\"}. Replace the values with what you actually see. cat must be: tops, bottoms, dresses, shoes, kids, watches, jewelry, or null. needsSize true only for clothing/shoes.' }
@@ -297,7 +297,7 @@ export default function App() {
       const r = await fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
-          model:"claude-3-7-sonnet-20250219", max_tokens:200,
+          model:"claude-sonnet-4-5", max_tokens:200,
           messages:[{ role:"user", content:'Second-hand resale price for: "'+name+'"\nReply ONLY with JSON:\n{"min":50,"max":150,"rarity":"common","tip":"one tip"}\nrarity: common/uncommon/rare/very_rare' }]
         }),
       });
@@ -353,7 +353,7 @@ export default function App() {
       fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
-          model:"claude-3-7-sonnet-20250219", max_tokens:1500,
+          model:"claude-sonnet-4-5", max_tokens:1500,
           tools:[{ type:"web_search_20250305", name:"web_search" }],
           messages:[{ role:"user", content: listingPrompt }]
         }),
@@ -361,7 +361,7 @@ export default function App() {
       fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
-          model:"claude-3-7-sonnet-20250219", max_tokens:800,
+          model:"claude-sonnet-4-5", max_tokens:800,
           tools:[{ type:"web_search_20250305", name:"web_search" }],
           messages:[{ role:"user", content: shopsPrompt }]
         }),
