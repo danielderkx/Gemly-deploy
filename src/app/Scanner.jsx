@@ -1,6 +1,30 @@
 'use client';
 import { useState, useRef, useEffect } from "react";
 
+// Recent searches — stored in localStorage
+const SEARCHES_KEY = "gemly_recent_searches";
+const saveSearch = (query) => {
+  try {
+    const existing = JSON.parse(localStorage.getItem(SEARCHES_KEY) || "[]");
+    const updated = [query, ...existing.filter(q => q !== query)].slice(0, 20);
+    localStorage.setItem(SEARCHES_KEY, JSON.stringify(updated));
+    // Also bump global counter
+    const count = parseInt(localStorage.getItem("gemly_search_count") || "0") + 1;
+    localStorage.setItem("gemly_search_count", count);
+  } catch {}
+};
+const getRecentSearches = () => {
+  try { return JSON.parse(localStorage.getItem(SEARCHES_KEY) || "[]"); } catch { return []; }
+};
+
+// Sort listings by price ascending
+const sortByPrice = (listings) => {
+  return [...listings].sort((a, b) => {
+    const getNum = p => parseFloat((p || "").replace(/[^0-9.,]/g, "").replace(",", ".")) || 99999;
+    return getNum(a.price) - getNum(b.price);
+  });
+};
+
 const getContinent = c => ({ EU:"Europe", NA:"North America", SA:"South America", AS:"Asia", AF:"Africa", OC:"Oceania" }[c] || "your continent");
 const getFlag = c => !c ? "🌍" : c.toUpperCase().replace(/./g, x => String.fromCodePoint(x.charCodeAt(0)+127397));
 const getCurrency = cc => ({ GB:"£", US:"$", CA:"CA$", AU:"AU$", CH:"CHF", JP:"¥" }[cc] || "€");
@@ -397,8 +421,9 @@ export default function App() {
       if (p?.shops?.length) foundShops = p.shops.slice(0,3);
     }
 
-    setListings(foundListings);
+    setListings(sortByPrice(foundListings));
     setShopResults(foundShops);
+    if (foundListings.length > 0) saveSearch(identifiedItem);
     setStep("results");
   };
 
