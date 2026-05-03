@@ -5,6 +5,21 @@ const getContinent = c => ({ EU:"Europe", NA:"North America", SA:"South America"
 const getFlag = c => !c ? "🌍" : c.toUpperCase().replace(/./g, x => String.fromCodePoint(x.charCodeAt(0)+127397));
 const getCurrency = cc => ({ GB:"£", US:"$", CA:"CA$", AU:"AU$", CH:"CHF", JP:"¥" }[cc] || "€");
 
+// If a listing URL looks fake/broken, generate a real search URL for that platform
+const getFallbackUrl = (platform, query) => {
+  const q = encodeURIComponent(query);
+  const p = (platform || "").toLowerCase();
+  if (p.includes("vinted")) return `https://www.vinted.nl/catalog?search_text=${q}`;
+  if (p.includes("grailed")) return `https://www.grailed.com/shop/listings?query=${q}`;
+  if (p.includes("depop")) return `https://www.depop.com/search/?q=${q}`;
+  if (p.includes("stockx")) return `https://stockx.com/search?s=${q}`;
+  if (p.includes("vestiaire")) return `https://www.vestiairecollective.com/search/?q=${q}`;
+  if (p.includes("ebay")) return `https://www.ebay.com/sch/i.html?_nkw=${q}`;
+  if (p.includes("marktplaats")) return `https://www.marktplaats.nl/q/${q}`;
+  if (p.includes("goat")) return `https://www.goat.com/search?query=${q}`;
+  return `https://www.google.com/search?q=${q}+${p}+kopen`;
+};
+
 const getSearchPlatforms = (condition, cc, radius, cont, category) => {
   if (category === "watches") return "Chrono24 (chrono24.com), Watchfinder (watchfinder.com), Bob's Watches (bobswatches.com), eBay watches, Catawiki watches";
   if (category === "jewelry") return "1stDibs (1stdibs.com), Etsy vintage jewelry, eBay jewelry, Vestiaire Collective, Catawiki jewelry";
@@ -324,12 +339,10 @@ export default function App() {
 
     const hasBudget = !!(priceMin || priceMax);
     const listingPrompt =
-      'Search the web RIGHT NOW and find 3 real product listings for: "' + activeQ + '" (' + filters + ') in ' + locText + '.\n' +
-      'Search on: ' + platforms + '\n' +
-      'RULES: You MUST search and return real URLs. Do NOT say "unable to find" or "no listings found" — always return something. ' +
-      (hasBudget ? 'If nothing in budget, return cheapest available. ' : '') +
-      'If exact item not found, return the closest match. Active listings only.\n' +
-      'Reply ONLY JSON: {"listings":[{"title":"...","price":"'+currency+'XX","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
+      'Search the web for: "' + activeQ + '" ' + filters + ' ' + locText + ' on: ' + platforms + '\n\n' +
+      'CRITICAL: After searching, copy the EXACT URLs from your search results. Do not construct or guess URLs — only use URLs that literally appeared in your search results.\n' +
+      (hasBudget ? 'If nothing in budget, show cheapest found instead.\n' : '') +
+      'Reply ONLY JSON: {"listings":[{"title":"...","price":"'+currency+'XX","platform":"...","url":"https://exact-url-from-search-results","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
 
     const shopsPrompt =
       'Find 3 real physical stores in ' + locText + ' selling: "' + identifiedItem + '".\n' +
