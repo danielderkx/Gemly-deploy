@@ -408,7 +408,7 @@ export default function App() {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
           model:"claude-sonnet-4-5", max_tokens:1000,
-          tools:[{ type:"web_search_20250305", name:"web_search" }],
+          tools:[{ type:"web_search_20250305", name:"web_search", max_uses:3 }],
           messages:[{ role:"user", content: listingPrompt }]
         }),
       }).then(r=>r.json()),
