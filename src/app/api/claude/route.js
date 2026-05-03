@@ -7,12 +7,12 @@ export async function POST(request) {
         "Content-Type": "application/json",
         "x-api-key": process.env.ANTHROPIC_API_KEY,
         "anthropic-version": "2023-06-01",
-        "anthropic-beta": "web-search-2025-03-05",
+        "anthropic-beta": "web-search-2025-03-05,prompt-caching-2024-07-31",
       },
       body: JSON.stringify(body),
     });
     const data = await response.json();
-    console.log("Anthropic response:", JSON.stringify(data).slice(0, 500));
+    console.log("Anthropic response status:", response.status, JSON.stringify(data).slice(0, 200));
     return Response.json(data, { status: response.status });
   } catch (error) {
     console.log("Error:", error.message);
