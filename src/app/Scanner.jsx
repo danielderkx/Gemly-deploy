@@ -317,15 +317,43 @@ export default function App() {
     }
   };
 
-  const identifyText = () => {
+  const identifyText = async () => {
     if (!textQuery.trim()) return;
     const name = textQuery.trim();
-    const words = name.split(" ");
-    setIdentifiedItem(name); setSearchQuery(name);
-    setSimilarQuery(words.length>1 ? words.slice(1).join(" ") : name);
-    setSizeRelevant(false); setItemCategory(null); setSizeCat(null);
-    setStep("match_type");
-    fetchPriceEst(name);
+    setStep("identifying"); setError("");
+    try {
+      const r = await fetch("/api/claude", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({
+          model:"claude-sonnet-4-5", max_tokens:200,
+          messages:[{ role:"user", content:'Fashion/luxury item: "' + name + '". Reply ONLY JSON: {"name":"exact item name","searchQuery":"best search term","similarQuery":"generic alternative","needsSize":true,"cat":"shoes"}. cat: tops/bottoms/dresses/shoes/kids/watches/jewelry/null. needsSize true for clothing/shoes. Make searchQuery specific with brand+model.' }]
+        }),
+      });
+      const d = await r.json();
+      if (d?.error?.type === "rate_limit_error") {
+        setError("⏳ Too many requests. Wait 30 seconds and try again.");
+        setStep("upload"); return;
+      }
+      const raw = (d.content?.[0]?.text || "").trim();
+      const parsed = parseJSON(raw);
+      const finalName = parsed?.name || name;
+      const sq = parsed?.searchQuery || name;
+      const simQ = parsed?.similarQuery || name;
+      setIdentifiedItem(finalName); setSearchQuery(sq); setSimilarQuery(simQ);
+      setSizeRelevant(parsed?.needsSize === true);
+      const cat = parsed?.cat || null;
+      if (cat) { setItemCategory(cat); if (SIZE_CATS[cat]) setSizeCat(cat); }
+      setStep("match_type");
+      fetchPriceEst(finalName);
+    } catch {
+      // Fallback: use text as-is
+      const words = name.split(" ");
+      setIdentifiedItem(name); setSearchQuery(name);
+      setSimilarQuery(words.length>1 ? words.slice(1).join(" ") : name);
+      setSizeRelevant(false); setItemCategory(null); setSizeCat(null);
+      setStep("match_type");
+      fetchPriceEst(name);
+    }
   };
 
   const fetchPriceEst = async name => {
@@ -561,7 +589,7 @@ export default function App() {
               </div>
             ):<div style={{width:70,height:70,background:"linear-gradient(135deg,#FDF6EC,#FBF1E3)",borderRadius:16,margin:"0 auto 1.5rem",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28}}>🔍</div>}
             <p style={{color:"#2C2417",fontSize:13,letterSpacing:".1em",textTransform:"uppercase",fontWeight:600,margin:"0 0 5px"}}>Identifying your item</p>
-            <p style={{color:"#A89880",fontSize:12,margin:0}}>AI is reading the image…</p>
+            <p style={{color:"#A89880",fontSize:12,margin:0}}>{imageData ? "AI is reading the image…" : "AI is analysing your search…"}</p>
           </div>
         )}
 
