@@ -1,12 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from "react";
 
-// Simple in-memory cache — survives page navigation, resets on refresh
-const searchCache = new Map();
-const CACHE_TTL = 1000 * 60 * 30; // 30 minutes
-const getCacheKey = (query, condition, quality, size, priceMin, priceMax, radius, location) =>
-  [query, condition, quality, size, priceMin, priceMax, radius, location].join("|").toLowerCase();
-
 const getContinent = c => ({ EU:"Europe", NA:"North America", SA:"South America", AS:"Asia", AF:"Africa", OC:"Oceania" }[c] || "your continent");
 const getFlag = c => !c ? "🌍" : c.toUpperCase().replace(/./g, x => String.fromCodePoint(x.charCodeAt(0)+127397));
 const getCurrency = cc => ({ GB:"£", US:"$", CA:"CA$", AU:"AU$", CH:"CHF", JP:"¥" }[cc] || "€");
@@ -328,24 +322,13 @@ export default function App() {
     const shopType = condition==="new" ? "physical retail stores or boutiques" : "physical vintage, thrift, consignment or streetwear stores";
     const filters = [condText, qualText, sizeText, priceText].filter(Boolean).join(", ");
 
-    // Check cache first
-    const cacheKey = getCacheKey(activeQ, condition, quality, effSize, priceMin, priceMax, radius, locText);
-    const cached = searchCache.get(cacheKey);
-    if (cached && Date.now() - cached.ts < CACHE_TTL) {
-      setListings(cached.listings);
-      setShopResults(cached.shops);
-      setSearchPhase(3);
-      setStep("results");
-      return;
-    }
-
     const hasBudget = !!(priceMin || priceMax);
     const listingPrompt =
-      'Expert reseller task: find 3 ACTIVE listings for "' + activeQ + '" (' + filters + ') in ' + locText + '.\n' +
+      'Search the web RIGHT NOW and find 3 real product listings for: "' + activeQ + '" (' + filters + ') in ' + locText + '.\n' +
       'Search on: ' + platforms + '\n' +
-      'Use specific search terms: exact model names, colorways, SKU codes if relevant.\n' +
-      (hasBudget ? 'If nothing in budget, show cheapest available options instead — never return empty.\n' : '') +
-      'ACTIVE listings only — skip sold/unavailable. Real URLs only, no invented listings.\n' +
+      'RULES: You MUST search and return real URLs. Do NOT say "unable to find" or "no listings found" — always return something. ' +
+      (hasBudget ? 'If nothing in budget, return cheapest available. ' : '') +
+      'If exact item not found, return the closest match. Active listings only.\n' +
       'Reply ONLY JSON: {"listings":[{"title":"...","price":"'+currency+'XX","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
 
     const shopsPrompt =
@@ -395,9 +378,6 @@ export default function App() {
       const p = parseJSON(txt);
       if (p?.shops?.length) foundShops = p.shops.slice(0,3);
     }
-
-    // Save to cache
-    searchCache.set(cacheKey, { listings: foundListings, shops: foundShops, ts: Date.now() });
 
     setListings(foundListings);
     setShopResults(foundShops);
