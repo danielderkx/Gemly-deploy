@@ -1,12 +1,22 @@
 'use client';
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function Home() {
   const router = useRouter();
   const go = () => router.push("/scan");
+  const [recentSearches, setRecentSearches] = useState([]);
+  const [searchCount, setSearchCount] = useState(0);
 
   useEffect(() => {
+    // Load recent searches from localStorage
+    try {
+      const searches = JSON.parse(localStorage.getItem("gemly_recent_searches") || "[]");
+      setRecentSearches(searches);
+      const count = parseInt(localStorage.getItem("gemly_search_count") || "0");
+      setSearchCount(count);
+    } catch {}
+
     const els = document.querySelectorAll('.rv');
     const obs = new IntersectionObserver(entries => {
       entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('vis'); });
@@ -50,6 +60,13 @@ export default function Home() {
     .plats{margin-top:3rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;}
     .pl{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#B0A498;font-weight:700;margin-right:4px;}
     .pp{background:#FFF;border:1px solid #EDE8DF;border-radius:100px;padding:.28rem .75rem;font-size:11px;font-weight:600;color:#6B5F53;}
+    .social-proof{display:inline-flex;align-items:center;gap:8px;background:#FFF;border:1px solid #EDE8DF;border-radius:100px;padding:.4rem 1.1rem;font-size:12px;font-weight:600;color:#2C2417;margin-bottom:1.25rem;}
+    .sp-dot{width:8px;height:8px;background:#22C55E;border-radius:50%;flex-shrink:0;}
+    .recent-strip{display:block;width:100%;background:#FDFAF6;border-bottom:1px solid #EDE8DF;padding:.7rem 2rem;}
+    .recent-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+    .recent-label{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#A89880;font-weight:700;white-space:nowrap;margin-right:4px;}
+    .recent-pill{background:#FFF;border:1px solid #EDE8DF;border-radius:100px;padding:.25rem .75rem;font-size:11px;font-weight:600;color:#6B5F53;cursor:pointer;transition:all .15s;white-space:nowrap;}
+    .recent-pill:hover{border-color:#C4924A;color:#C4924A;}
 
     /* MARQUEE */
     .mq{display:block;width:100%;overflow:hidden;border-top:1px solid #EDE8DF;border-bottom:1px solid #EDE8DF;background:#FFF;padding:.85rem 0;}
@@ -142,6 +159,12 @@ export default function Home() {
           <div className="hero-glow"/>
           <div className="hero-inner">
             <div className="badge"><span className="bdot"/>AI-powered deal finder</div>
+            {(searchCount > 0) && (
+              <div className="social-proof">
+                <span className="sp-dot"/>
+                {searchCount > 50 ? `${searchCount}+ searches completed` : "Be among the first to try Gemly"}
+              </div>
+            )}
             <h1 className="h1">Scan anything.<br/>Find it <em>cheaper.</em></h1>
             <p className="sub">Take a photo of any item — clothes, sneakers, bags, watches — and Gemly finds the best deals across the biggest platforms worldwide.</p>
             <div className="btns">
@@ -172,6 +195,18 @@ export default function Home() {
             ))}
           </div>
         </div>
+
+        {/* RECENT SEARCHES */}
+        {recentSearches.length > 0 && (
+          <div className="recent-strip">
+            <div className="recent-inner">
+              <span className="recent-label">Others searched</span>
+              {recentSearches.slice(0, 8).map((s, i) => (
+                <span key={i} className="recent-pill" onClick={go}>🔍 {s}</span>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* HOW IT WORKS */}
         <section className="sec">
