@@ -341,16 +341,17 @@ export default function App() {
 
     const hasBudget = !!(priceMin || priceMax);
     const listingPrompt =
-      'Find 3 active listings for: "' + activeQ + '" — ' + filters + ' — in ' + locText + '.\n' +
+      'Expert reseller task: find 3 ACTIVE listings for "' + activeQ + '" (' + filters + ') in ' + locText + '.\n' +
       'Search on: ' + platforms + '\n' +
-      (hasBudget ? 'If nothing in budget, show cheapest available instead.\n' : '') +
-      'Only ACTIVE listings, skip sold items. Real URLs only.\n' +
-      'JSON only: {"listings":[{"title":"...","price":"'+currency+'XX","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
+      'Use specific search terms: exact model names, colorways, SKU codes if relevant.\n' +
+      (hasBudget ? 'If nothing in budget, show cheapest available options instead — never return empty.\n' : '') +
+      'ACTIVE listings only — skip sold/unavailable. Real URLs only, no invented listings.\n' +
+      'Reply ONLY JSON: {"listings":[{"title":"...","price":"'+currency+'XX","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
 
     const shopsPrompt =
-      'Find 3 real physical stores in ' + locText + ' that sell: "' + identifiedItem + '".\n' +
-      'Only stores INSIDE ' + locText + '. Include city in address.\n' +
-      'JSON only: {"shops":[{"name":"...","description":"...","address":"city, country","url":"https://...","tip":"..."},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."}]}';
+      'Find 3 real physical stores in ' + locText + ' selling: "' + identifiedItem + '".\n' +
+      'Specialist boutiques, vintage/consignment shops preferred. Must be in ' + locText + ' — include full city in address.\n' +
+      'Reply ONLY JSON: {"shops":[{"name":"...","description":"...","address":"city, country","url":"https://...","tip":"..."},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."}]}';
 
     const [listingRes, shopRes] = await Promise.allSettled([
       fetch("/api/claude", {
