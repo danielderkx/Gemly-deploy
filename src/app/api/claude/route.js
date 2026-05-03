@@ -2,20 +2,16 @@ export async function POST(request) {
   try {
     const body = await request.json();
 
-    // Add cache_control to last user message for prompt caching (50-90% cost reduction)
-    if (body.messages?.length > 0) {
-      const lastMsg = body.messages[body.messages.length - 1];
-      if (lastMsg.role === "user") {
-        if (typeof lastMsg.content === "string") {
-          lastMsg.content = [{
-            type: "text",
-            text: lastMsg.content,
-            cache_control: { type: "ephemeral" }
-          }];
-        } else if (Array.isArray(lastMsg.content) && lastMsg.content.length > 0) {
-          lastMsg.content[lastMsg.content.length - 1].cache_control = { type: "ephemeral" };
+    // Add a cacheable system prompt to every request
+    // Anthropic caches this after first use — saves tokens on every subsequent call
+    if (!body.system && body.messages?.length > 0) {
+      body.system = [
+        {
+          type: "text",
+          text: "You are Gemly, an expert AI shopping assistant specializing in fashion, sneakers, luxury goods, and vintage items. You help users find the best deals on secondhand and new items across platforms like eBay, Vinted, Grailed, StockX, Vestiaire Collective, Depop, and Marktplaats. Always return valid JSON only, no markdown, no explanation. Only return real URLs from search results.",
+          cache_control: { type: "ephemeral" }
         }
-      }
+      ];
     }
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
