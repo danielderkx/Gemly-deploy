@@ -77,7 +77,7 @@ const SIZE_CATS = {
   tops:    { label:"Tops & jackets",   sizes:["XS","S","M","L","XL","XXL","3XL"] },
   bottoms: { label:"Bottoms & jeans",  sizes:["26","28","30","32","34","36","38","40"] },
   dresses: { label:"Dresses & skirts", sizes:["XS","S","M","L","XL","XXL"] },
-  shoes:   { label:"Shoes",            sizes:["35","36","37","38","39","40","41","42","43","44","45","46"] },
+  shoes:   { label:"Shoes",            sizes:["35","36","37","38","39","40","41","42","43","44","45","46","47","48","49","50"] },
   kids:    { label:"Kids",             sizes:["86","92","98","104","110","116","122","128","140","152","164","176"] },
 };
 const QUALITY_OPTS = [
@@ -339,14 +339,19 @@ export default function App() {
 
     const hasBudget = !!(priceMin || priceMax);
     const listingPrompt =
-      'Search the web for: "' + activeQ + '" ' + filters + ' ' + locText + ' on: ' + platforms + '\n\n' +
-      'CRITICAL: After searching, copy the EXACT URLs from your search results. Do not construct or guess URLs — only use URLs that literally appeared in your search results.\n' +
-      (hasBudget ? 'If nothing in budget, show cheapest found instead.\n' : '') +
-      'Reply ONLY JSON: {"listings":[{"title":"...","price":"'+currency+'XX","platform":"...","url":"https://exact-url-from-search-results","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
+      'Search the web for listings of: "' + activeQ + '" on ' + platforms + '\n' +
+      'Preferred filters: ' + filters + ', location: ' + locText + '\n\n' +
+      'RULES:\n' +
+      '1. Search and find REAL listings — copy exact URLs from your search results\n' +
+      '2. If nothing found with all filters, relax filters one by one (first location, then size, then price)\n' +
+      '3. Always return 3 listings — even if not perfect match, show closest available\n' +
+      '4. Only use URLs that actually appeared in search results\n\n' +
+      'Reply ONLY JSON: {"listings":[{"title":"...","price":"'+currency+'XX","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
 
     const shopsPrompt =
-      'Find 3 real physical stores in ' + locText + ' selling: "' + identifiedItem + '".\n' +
-      'Specialist boutiques, vintage/consignment shops preferred. Must be in ' + locText + ' — include full city in address.\n' +
+      'Search the web for physical stores selling: "' + identifiedItem + '" in ' + locText + '\n' +
+      'Look for vintage shops, consignment stores, sneaker boutiques, designer resellers in ' + locText + '\n' +
+      'If nothing in ' + locText + ', find nearest stores in surrounding area\n' +
       'Reply ONLY JSON: {"shops":[{"name":"...","description":"...","address":"city, country","url":"https://...","tip":"..."},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."}]}';
 
     const [listingRes, shopRes] = await Promise.allSettled([
