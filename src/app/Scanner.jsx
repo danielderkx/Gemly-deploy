@@ -6,35 +6,43 @@ const getFlag = c => !c ? "🌍" : c.toUpperCase().replace(/./g, x => String.fro
 const getCurrency = cc => ({ GB:"£", US:"$", CA:"CA$", AU:"AU$", CH:"CHF", JP:"¥" }[cc] || "€");
 
 const getSearchPlatforms = (condition, cc, radius, cont, category) => {
-  if (category === "watches") return "Chrono24, Watchfinder, eBay, Catawiki";
-  if (category === "jewelry") return "Etsy, eBay, Vestiaire Collective, Depop";
+  if (category === "watches") return "Chrono24 (chrono24.com), Watchfinder (watchfinder.com), Bob's Watches (bobswatches.com), eBay watches, Catawiki watches";
+  if (category === "jewelry") return "1stDibs (1stdibs.com), Etsy vintage jewelry, eBay jewelry, Vestiaire Collective, Catawiki jewelry";
+  if (category === "shoes") {
+    if (condition === "new") return "StockX (stockx.com), GOAT (goat.com), Farfetch, Zalando, END Clothing (endclothing.com)";
+    return "StockX (stockx.com), GOAT (goat.com), Vestiaire Collective (vestiairecollective.com), eBay sneakers, Depop, Grailed (grailed.com)";
+  }
+  if (category === "tops" || category === "bottoms" || category === "dresses") {
+    if (condition === "new") return "Farfetch, SSENSE, END Clothing, Zalando, ASOS";
+    return "Grailed (grailed.com), Depop, Vinted, Vestiaire Collective, eBay fashion";
+  }
   const isNew = condition === "new";
   if (isNew) {
     if (radius === "country") {
-      if (cc==="NL") return "Bijenkorf (debijenkorf.nl), Zalando, ASOS, H&M, Wehkamp";
-      if (cc==="GB") return "ASOS, John Lewis, Selfridges, M&S, Next";
-      if (cc==="US") return "Nordstrom, Saks Fifth Avenue, ASOS, Zara, H&M";
-      return "Zalando, ASOS, H&M, Zara, Uniqlo";
+      if (cc==="NL") return "Bijenkorf (debijenkorf.nl), Zalando, ASOS, Wehkamp, About You";
+      if (cc==="GB") return "ASOS, John Lewis, Selfridges, END Clothing, Matches Fashion";
+      if (cc==="US") return "Nordstrom, Saks Fifth Avenue, SSENSE, END Clothing, ASOS";
+      return "Zalando, ASOS, Farfetch, About You, H&M";
     }
     if (radius === "continent") {
-      if (cont==="EU"||cc==="NL"||cc==="GB"||cc==="DE"||cc==="FR") return "Zalando, ASOS, Selfridges, Bijenkorf, Farfetch, Net-a-Porter, Mytheresa";
-      return "Farfetch, Net-a-Porter, ASOS, Nordstrom, Saks";
+      if (cont==="EU"||cc==="NL"||cc==="GB"||cc==="DE"||cc==="FR") return "Farfetch, SSENSE, Net-a-Porter, Mytheresa, END Clothing, Zalando";
+      return "Farfetch, Net-a-Porter, SSENSE, Nordstrom, END Clothing";
     }
-    return "Farfetch, Net-a-Porter, Mytheresa, SSENSE, Nordstrom, ASOS, Selfridges";
+    return "Farfetch, SSENSE, Net-a-Porter, Mytheresa, END Clothing, Browns Fashion, LN-CC";
   }
   if (radius === "country") {
-    if (cc==="NL") return "Marktplaats, Vinted NL (vinted.nl), 2dehands, eBay NL, Vestiaire Collective";
-    if (cc==="GB") return "eBay UK (ebay.co.uk), Vinted UK (vinted.co.uk), Depop, Vestiaire Collective";
-    if (cc==="DE") return "eBay Kleinanzeigen, Vinted DE, eBay Germany, Vestiaire Collective";
-    if (cc==="FR") return "Vinted FR, Le Bon Coin, Vestiaire Collective, eBay France";
-    if (cc==="US") return "eBay, Poshmark, Depop, The RealReal, ThredUp";
-    return "eBay, Vinted, Depop, Vestiaire Collective";
+    if (cc==="NL") return "Marktplaats (marktplaats.nl), Vinted NL (vinted.nl), Vestiaire Collective (vestiairecollective.com), 2dehands, Grailed, Depop";
+    if (cc==="GB") return "eBay UK (ebay.co.uk), Vinted UK (vinted.co.uk), Depop, Vestiaire Collective, Grailed";
+    if (cc==="DE") return "eBay Kleinanzeigen (kleinanzeigen.de), Vinted DE, Grailed, Vestiaire Collective";
+    if (cc==="FR") return "Vinted FR, Le Bon Coin (leboncoin.fr), Vestiaire Collective, Grailed";
+    if (cc==="US") return "Grailed (grailed.com), Poshmark, Depop, The RealReal, StockX";
+    return "eBay, Vinted, Grailed, Depop, Vestiaire Collective";
   }
   if (radius === "continent") {
-    if (cont==="EU"||cc==="NL"||cc==="GB"||cc==="DE"||cc==="FR") return "eBay, Vinted, Depop, Vestiaire Collective, Marktplaats, Wallapop, Catawiki";
-    return "eBay, Poshmark, Depop, The RealReal, ThredUp";
+    if (cont==="EU"||cc==="NL"||cc==="GB"||cc==="DE"||cc==="FR") return "Grailed, Vinted, Depop, Vestiaire Collective, eBay, Wallapop, Catawiki";
+    return "Grailed, Poshmark, Depop, The RealReal, StockX, eBay";
   }
-  return "eBay, Vinted, Depop, Vestiaire Collective, The RealReal, Poshmark, Catawiki";
+  return "Grailed (grailed.com), StockX (stockx.com), Vestiaire Collective, Depop, The RealReal, eBay, Catawiki";
 };
 
 const parseJSON = text => {
@@ -233,10 +241,10 @@ export default function App() {
       const r = await fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
-          model:"claude-sonnet-4-5", max_tokens:300,
+          model:"claude-sonnet-4-5", max_tokens:400,
           messages:[{ role:"user", content:[
             { type:"image", source:{ type:"base64", media_type:mediaType, data:base64 } },
-            { type:"text", text:'What item is in this image? Reply with ONLY a JSON object and nothing else. Example format: {"name":"Nike Air Max 90 sneakers","searchQuery":"Nike Air Max 90","similarQuery":"white sneakers","needsSize":true,"cat":"shoes"}. Replace the values with what you actually see. cat must be: tops, bottoms, dresses, shoes, kids, watches, jewelry, or null. needsSize true only for clothing/shoes.' }
+            { type:"text", text:'You are a fashion and luxury goods expert. Identify the item as specifically as possible — include brand, model name, colorway, material, season/year if visible. Reply with ONLY a JSON object. Example: {"name":"Nike Air Max 90 Triple White sneakers","searchQuery":"Nike Air Max 90 Triple White","similarQuery":"white low-top sneakers","needsSize":true,"cat":"shoes"}. cat must be: tops, bottoms, dresses, shoes, kids, watches, jewelry, or null. needsSize true only for clothing/shoes. Include model numbers, colorways, collaborations if visible.' }
           ]}]
         }),
       });
@@ -283,7 +291,7 @@ export default function App() {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
           model:"claude-sonnet-4-5", max_tokens:200,
-          messages:[{ role:"user", content:'Second-hand resale price for: "'+name+'"\nReply ONLY with JSON:\n{"min":50,"max":150,"rarity":"common","tip":"one tip"}\nrarity: common/uncommon/rare/very_rare' }]
+          messages:[{ role:"user", content:'You are a resale market expert. Current second-hand resale price for: "'+name+'"?\nReply ONLY with JSON:\n{"min":50,"max":150,"rarity":"common","tip":"one actionable buying tip"}\nrarity: common/uncommon/rare/very_rare' }]
         }),
       });
       const d = await r.json();
@@ -306,30 +314,33 @@ export default function App() {
     const sizeText = effSize ? "size "+effSize : "";
     const priceText = (priceMin||priceMax) ? "price "+currency+(priceMin||"0")+"-"+currency+(priceMax||"any") : "";
     const platforms = getSearchPlatforms(condition, userLocation?.countryCode, radius, userLocation?.continentCode, itemCategory);
-    const shopType = condition==="new" ? "physical retail stores or boutiques" : "physical vintage, thrift or consignment stores";
+    const shopType = condition==="new" ? "physical retail stores or boutiques" : "physical vintage, thrift, consignment or streetwear stores";
     const filters = [condText, qualText, sizeText, priceText].filter(Boolean).join(", ");
 
+    const hasBudget = !!(priceMin || priceMax);
     const listingPrompt =
-      'Search these platforms: ' + platforms + '\n' +
-      'Find 3 real listings for: "' + activeQ + '" — ' + filters + ' — location: ' + locText + '\n\n' +
-      'IMPORTANT: Use web search to find ACTUAL listings that exist right now. Return URLs of real product pages you found in the search results.\n\n' +
-      'Reply ONLY with JSON (no markdown):\n' +
-      '{"listings":[' +
-      '{"title":"exact listing title","price":"'+currency+'XX","platform":"site name","url":"https://actual-listing-url-from-search","condition":"condition","location":"city or country"},' +
-      '{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},' +
-      '{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}' +
-      ']}';
+      'You are an expert reseller who knows exactly how to find items online. Find 3 REAL listings for: "' + activeQ + '".\n\n' +
+      'Filters: ' + filters + '\n' +
+      'Location: ' + locText + '\n' +
+      'Platforms to search: ' + platforms + '\n\n' +
+      'STEP 1: Think like an expert — what exact search terms would a specialist reseller use? Use model names, colorways, SKU codes, season codes, collab names.\n' +
+      'STEP 2: Search the web using those expert terms on the listed platforms.\n' +
+      (hasBudget ? 'STEP 2b: If nothing found within the price range, search WITHOUT the price filter and return the cheapest available options. It is better to show real results slightly outside budget than to return nothing.\n' : '') +
+      'STEP 3: Return REAL listings with real URLs. If you only find 1 or 2 listings, still return those. Never invent listings.\n\n' +
+      'Reply ONLY with JSON:\n' +
+      '{"listings":[{"title":"exact listing title","price":"'+currency+'XX","platform":"site name","url":"https://real-url","condition":"condition","location":"city or country"},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
 
     const shopsPrompt =
-      'Find 3 real ' + shopType + ' in ' + locText + ' that carry: "' + identifiedItem + '"\n\n' +
+      'You are a local shopping expert. Find 3 real physical ' + shopType + ' in ' + locText + ' that carry: "' + identifiedItem + '".\n\n' +
+      'Search for actual specialist boutiques, consignment shops, vintage dealers, concept stores — not generic chains.\n\n' +
       'Reply ONLY with JSON:\n' +
-      '{"shops":[{"name":"name","description":"1 sentence speciality","address":"city or street","url":"https://...","tip":"why this shop might have it"},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."}]}';
+      '{"shops":[{"name":"store name","description":"1 sentence speciality","address":"city or address","url":"https://website.com","tip":"why this store might have it"},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."}]}';
 
     const [listingRes, shopRes] = await Promise.allSettled([
       fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
-          model:"claude-sonnet-4-5", max_tokens:1500,
+          model:"claude-sonnet-4-5", max_tokens:2000,
           tools:[{ type:"web_search_20250305", name:"web_search" }],
           messages:[{ role:"user", content: listingPrompt }]
         }),
@@ -337,7 +348,7 @@ export default function App() {
       fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
-          model:"claude-sonnet-4-5", max_tokens:800,
+          model:"claude-sonnet-4-5", max_tokens:1000,
           tools:[{ type:"web_search_20250305", name:"web_search" }],
           messages:[{ role:"user", content: shopsPrompt }]
         }),
@@ -426,7 +437,6 @@ export default function App() {
           <h1 className="app-title">Scan &amp; Find</h1>
           <p className="app-sub">Online deals · Hidden gem shops</p>
         </div>
-
         {currentIdx>=0&&<div className="progress-row">{STEP_ORDER.map((s,i)=><div key={s} className={"pdot "+(i<currentIdx?"done":i===currentIdx?"active":"")}/>)}</div>}
         {error&&<div className="err">{error}</div>}
 
@@ -476,7 +486,7 @@ export default function App() {
               <>
                 <p style={{fontSize:13,color:"#A89880",margin:"0 0 1rem",lineHeight:1.5}}>Type brand, model, colour — anything.</p>
                 <div className="search-row">
-                  <input className="search-input" type="text" placeholder='e.g. "Fred Perry polo" or "Rolex Datejust"'
+                  <input className="search-input" type="text" placeholder='e.g. "Palace tri-ferg tee SS23" or "Rolex Datejust 41"'
                     value={textQuery} onChange={e=>setTextQuery(e.target.value)}
                     onKeyDown={e=>e.key==="Enter"&&identifyText()} autoFocus/>
                   <button className="search-btn" disabled={!textQuery.trim()} onClick={identifyText}>Search</button>
@@ -502,11 +512,8 @@ export default function App() {
         {step==="match_type"&&(
           <div className="slide-in">
             <div className="id-pill">
-              {imageData
-                ?<img src={imageData} alt="" style={{width:52,height:52,objectFit:"cover",borderRadius:8,border:"1px solid #E8D9C0",flexShrink:0}}/>
-                :<div style={{width:40,height:40,background:"#F2EBE0",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>
-                  {itemCategory==="watches"?"⌚":itemCategory==="jewelry"?"💍":"🔍"}
-                </div>}
+              {imageData?<img src={imageData} alt="" style={{width:52,height:52,objectFit:"cover",borderRadius:8,border:"1px solid #E8D9C0",flexShrink:0}}/>
+                :<div style={{width:40,height:40,background:"#F2EBE0",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>{itemCategory==="watches"?"⌚":itemCategory==="jewelry"?"💍":"🔍"}</div>}
               <div style={{flex:1,minWidth:0}}>
                 <span className="lbl" style={{margin:0}}>Identified as</span>
                 <div style={{color:"#2C2417",fontSize:15,fontFamily:"'Playfair Display',serif",fontStyle:"italic",lineHeight:1.3,marginTop:2}}>{identifiedItem||"Scanning…"}</div>
@@ -533,8 +540,7 @@ export default function App() {
             <span className="lbl">Your size</span>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7,marginBottom:"1rem"}}>
               {Object.entries(SIZE_CATS).map(([key,cat])=>(
-                <button key={key} className={"size-chip "+(sizeCat===key?"selected":"")}
-                  onClick={()=>{setSizeCat(sizeCat===key?null:key);setSelectedSize(null);}}>{cat.label}</button>
+                <button key={key} className={"size-chip "+(sizeCat===key?"selected":"")} onClick={()=>{setSizeCat(sizeCat===key?null:key);setSelectedSize(null);}}>{cat.label}</button>
               ))}
             </div>
             {sizeCat&&SIZE_CATS[sizeCat]&&(
@@ -542,20 +548,16 @@ export default function App() {
                 <span className="lbl" style={{marginBottom:8}}>Pick your size</span>
                 <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
                   {SIZE_CATS[sizeCat].sizes.map(s=>(
-                    <button key={s} className={"size-chip "+(selectedSize===s?"selected":"")} style={{minWidth:48}}
-                      onClick={()=>setSelectedSize(selectedSize===s?null:s)}>{s}</button>
+                    <button key={s} className={"size-chip "+(selectedSize===s?"selected":"")} style={{minWidth:48}} onClick={()=>setSelectedSize(selectedSize===s?null:s)}>{s}</button>
                   ))}
                 </div>
               </div>
             )}
             <div style={{marginBottom:"1.25rem"}}>
               <label style={{fontSize:10,color:"#C4924A",display:"block",marginBottom:6,letterSpacing:".15em",textTransform:"uppercase",fontWeight:700}}>Or type a custom size</label>
-              <input className="text-input" type="text" placeholder='e.g. "IT 42", "UK 12", "W32 L32"' value={customSize}
-                onChange={e=>{setCustomSize(e.target.value);if(e.target.value)setSelectedSize(null);}}/>
+              <input className="text-input" type="text" placeholder='e.g. "IT 42", "UK 12", "W32 L32"' value={customSize} onChange={e=>{setCustomSize(e.target.value);if(e.target.value)setSelectedSize(null);}}/>
             </div>
-            <button className="btn-primary" onClick={()=>setStep("condition")}>
-              {effSize?"Continue with size "+effSize:"Continue without size"}
-            </button>
+            <button className="btn-primary" onClick={()=>setStep("condition")}>{effSize?"Continue with size "+effSize:"Continue without size"}</button>
           </div>
         )}
 
@@ -632,9 +634,9 @@ export default function App() {
             {userLocation&&<p style={{color:"#A89880",fontSize:12,margin:"0 0 1rem"}}>You're in <strong style={{color:"#2C2417"}}>{userLocation.country}</strong>.</p>}
             <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:"1.25rem"}}>
               {[
-                {val:"country",   label:userLocation?userLocation.country+" only":"My country only",  icon:userLocation?getFlag(userLocation.countryCode):"📍", desc:"Local shops & platforms"},
-                {val:"continent", label:userLocation?userLocation.continent:"My continent",            icon:"🌍", desc:"Shops & platforms across your continent"},
-                {val:"worldwide", label:"Worldwide",                                                   icon:"🌐", desc:"No limits, international shipping"},
+                {val:"country",label:userLocation?userLocation.country+" only":"My country only",icon:userLocation?getFlag(userLocation.countryCode):"📍",desc:"Local shops & platforms"},
+                {val:"continent",label:userLocation?userLocation.continent:"My continent",icon:"🌍",desc:"Shops & platforms across your continent"},
+                {val:"worldwide",label:"Worldwide",icon:"🌐",desc:"No limits, international shipping"},
               ].map(({val,label,icon,desc})=>(
                 <button key={val} className={"choice-card "+(radius===val?"selected":"")} onClick={()=>setRadius(val)}>
                   <div style={{display:"flex",alignItems:"center",gap:12}}>
@@ -688,7 +690,7 @@ export default function App() {
             </div>
             <div style={{height:1,background:"linear-gradient(90deg,#C4924A,transparent)",opacity:.3,marginBottom:"1rem"}}/>
             <div className="sec-title"><span>Found online</span></div>
-            {listings.length===0&&<div className="no-results">No listings found right now. Try adjusting your filters or broadening your location.</div>}
+            {listings.length===0&&<div className="no-results">No listings found. Try broadening your location or adjusting filters.</div>}
             {listings.map((item,i)=>(
               <div key={i} className="listing-card">
                 <div style={{display:"flex",alignItems:"flex-start",gap:4}}>
@@ -735,7 +737,7 @@ export default function App() {
               </div>
             ))}
             <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:"1rem"}}>
-              <button className="btn-ghost" onClick={()=>{setStep("location");setListings([]);setShopResults([]);}}>Adjust filters &amp; search again</button>
+              <button className="btn-ghost" onClick={()=>{setListings([]);setShopResults([]);setStep("condition");}}>Adjust filters &amp; search again</button>
               <button className="rescan" style={{display:"block",textAlign:"center"}} onClick={reset}>Start a new scan</button>
             </div>
           </div>
