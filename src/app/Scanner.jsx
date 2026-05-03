@@ -362,8 +362,7 @@ export default function App() {
       const r = await fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
-          model:"claude-sonnet-4-5", max_tokens:200,
-          messages:[{ role:"user", content:'You are a resale market expert. Current second-hand resale price for: "'+name+'"?\nReply ONLY with JSON:\n{"min":50,"max":150,"rarity":"common","tip":"one actionable buying tip"}\nrarity: common/uncommon/rare/very_rare' }]
+          model:"claude-haiku-4-5", max_tokens:150,
         }),
       });
       const d = await r.json();
@@ -401,9 +400,7 @@ export default function App() {
       'Reply ONLY JSON: {"listings":[{"title":"...","price":"'+currency+'XX","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
 
     const shopsPrompt =
-      'Search the web for: vintage shops consignment stores sneaker boutiques designer resellers in ' + locText + ' that sell "' + identifiedItem + '"\n' +
-      'Also search: "' + identifiedItem + '" winkel ' + locText + ' AND "' + identifiedItem + '" shop ' + locText + '\n' +
-      'Find 3 REAL stores with working websites. Include city in address. If nothing in ' + locText + ', find nearest.\n' +
+      'Name 3 real physical ' + shopType + ' in ' + locText + ' that would carry: "' + identifiedItem + '". Use your knowledge of physical stores. Include city in address. Find nearest if none in ' + locText + '.\n' +
       'Reply ONLY JSON: {"shops":[{"name":"...","description":"1 sentence","address":"city, country","url":"https://...","tip":"why they might have it"},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."}]}';
 
     const [listingRes, shopRes] = await Promise.allSettled([
@@ -418,8 +415,7 @@ export default function App() {
       fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
-          model:"claude-sonnet-4-5", max_tokens:600,
-          tools:[{ type:"web_search_20250305", name:"web_search" }],
+          model:"claude-haiku-4-5", max_tokens:400,
           messages:[{ role:"user", content: shopsPrompt }]
         }),
       }).then(r=>r.json()),
