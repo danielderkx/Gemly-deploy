@@ -331,10 +331,11 @@ export default function App() {
       '{"listings":[{"title":"exact listing title","price":"'+currency+'XX","platform":"site name","url":"https://real-url","condition":"condition","location":"city or country"},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
 
     const shopsPrompt =
-      'You are a local shopping expert. Find 3 real physical ' + shopType + ' in ' + locText + ' that carry: "' + identifiedItem + '".\n\n' +
-      'Search for actual specialist boutiques, consignment shops, vintage dealers, concept stores — not generic chains.\n\n' +
+      'You are a local shopping expert. Find 3 real physical ' + shopType + ' that are PHYSICALLY LOCATED in ' + locText + ' (this is strict — do NOT suggest stores outside this area).\n\n' +
+      'The item to find: "' + identifiedItem + '".\n\n' +
+      'Search for actual stores in ' + locText + '. If you cannot find stores in ' + locText + ', look for the nearest ones within ' + (radius==="country" ? "the same country" : radius==="continent" ? "the same continent" : "a reasonable distance") + '. Include the full city name in the address so the user knows exactly where it is.\n\n' +
       'Reply ONLY with JSON:\n' +
-      '{"shops":[{"name":"store name","description":"1 sentence speciality","address":"city or address","url":"https://website.com","tip":"why this store might have it"},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."}]}';
+      '{"shops":[{"name":"store name","description":"1 sentence speciality","address":"full city + country","url":"https://website.com","tip":"specific reason this store might have it"},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."}]}';
 
     const [listingRes, shopRes] = await Promise.allSettled([
       fetch("/api/claude", {
