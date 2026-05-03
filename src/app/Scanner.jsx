@@ -21,43 +21,43 @@ const getFallbackUrl = (platform, query) => {
 };
 
 const getSearchPlatforms = (condition, cc, radius, cont, category) => {
-  if (category === "watches") return "Chrono24 (chrono24.com), Watchfinder (watchfinder.com), Bob's Watches (bobswatches.com), eBay watches, Catawiki watches";
-  if (category === "jewelry") return "1stDibs (1stdibs.com), Etsy vintage jewelry, eBay jewelry, Vestiaire Collective, Catawiki jewelry";
+  if (category === "watches") return "Chrono24 (chrono24.com), Watchfinder (watchfinder.com), eBay, Catawiki";
+  if (category === "jewelry") return "1stDibs (1stdibs.com), Etsy, eBay, Vestiaire Collective, Catawiki";
   if (category === "shoes") {
-    if (condition === "new") return "StockX (stockx.com), GOAT (goat.com), Farfetch, Zalando, END Clothing (endclothing.com)";
-    return "StockX (stockx.com), GOAT (goat.com), Vestiaire Collective (vestiairecollective.com), eBay sneakers, Depop, Grailed (grailed.com)";
+    if (condition === "new") return "StockX (stockx.com), GOAT (goat.com), Farfetch, Zalando, END Clothing";
+    return "StockX (stockx.com), GOAT (goat.com), eBay, Vinted, Vestiaire Collective, Grailed (grailed.com), Depop";
   }
   if (category === "tops" || category === "bottoms" || category === "dresses") {
     if (condition === "new") return "Farfetch, SSENSE, END Clothing, Zalando, ASOS";
-    return "Grailed (grailed.com), Depop, Vinted, Vestiaire Collective, eBay fashion";
+    return "Grailed (grailed.com), Depop, Vinted, Vestiaire Collective, eBay";
   }
   const isNew = condition === "new";
   if (isNew) {
     if (radius === "country") {
       if (cc==="NL") return "Bijenkorf (debijenkorf.nl), Zalando, ASOS, Wehkamp, About You";
-      if (cc==="GB") return "ASOS, John Lewis, Selfridges, END Clothing, Matches Fashion";
+      if (cc==="GB") return "ASOS, John Lewis, Selfridges, END Clothing";
       if (cc==="US") return "Nordstrom, Saks Fifth Avenue, SSENSE, END Clothing, ASOS";
-      return "Zalando, ASOS, Farfetch, About You, H&M";
+      return "Zalando, ASOS, Farfetch, H&M";
     }
     if (radius === "continent") {
       if (cont==="EU"||cc==="NL"||cc==="GB"||cc==="DE"||cc==="FR") return "Farfetch, SSENSE, Net-a-Porter, Mytheresa, END Clothing, Zalando";
       return "Farfetch, Net-a-Porter, SSENSE, Nordstrom, END Clothing";
     }
-    return "Farfetch, SSENSE, Net-a-Porter, Mytheresa, END Clothing, Browns Fashion, LN-CC";
+    return "Farfetch, SSENSE, Net-a-Porter, Mytheresa, END Clothing";
   }
   if (radius === "country") {
-    if (cc==="NL") return "Marktplaats (marktplaats.nl), Vinted NL (vinted.nl), Vestiaire Collective (vestiairecollective.com), 2dehands, Grailed, Depop";
+    if (cc==="NL") return "Marktplaats (marktplaats.nl), Vinted NL (vinted.nl), Vestiaire Collective, eBay, Grailed, Depop";
     if (cc==="GB") return "eBay UK (ebay.co.uk), Vinted UK (vinted.co.uk), Depop, Vestiaire Collective, Grailed";
-    if (cc==="DE") return "eBay Kleinanzeigen (kleinanzeigen.de), Vinted DE, Grailed, Vestiaire Collective";
-    if (cc==="FR") return "Vinted FR, Le Bon Coin (leboncoin.fr), Vestiaire Collective, Grailed";
-    if (cc==="US") return "Grailed (grailed.com), Poshmark, Depop, The RealReal, StockX";
+    if (cc==="DE") return "eBay, Vinted DE, Vestiaire Collective, Grailed";
+    if (cc==="FR") return "Vinted FR, Le Bon Coin (leboncoin.fr), Vestiaire Collective, eBay";
+    if (cc==="US") return "Grailed (grailed.com), Poshmark, Depop, The RealReal, StockX, eBay";
     return "eBay, Vinted, Grailed, Depop, Vestiaire Collective";
   }
   if (radius === "continent") {
-    if (cont==="EU"||cc==="NL"||cc==="GB"||cc==="DE"||cc==="FR") return "Grailed, Vinted, Depop, Vestiaire Collective, eBay, Wallapop, Catawiki";
-    return "Grailed, Poshmark, Depop, The RealReal, StockX, eBay";
+    if (cont==="EU"||cc==="NL"||cc==="GB"||cc==="DE"||cc==="FR") return "eBay, Vinted, Grailed, Depop, Vestiaire Collective, Marktplaats, Catawiki";
+    return "eBay, Grailed, Poshmark, Depop, The RealReal, StockX";
   }
-  return "Grailed (grailed.com), StockX (stockx.com), Vestiaire Collective, Depop, The RealReal, eBay, Catawiki";
+  return "eBay, Grailed (grailed.com), Vestiaire Collective, Depop, The RealReal, Poshmark, StockX, Catawiki";
 };
 
 const parseJSON = text => {
@@ -349,10 +349,10 @@ export default function App() {
       'Reply ONLY JSON: {"listings":[{"title":"...","price":"'+currency+'XX","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
 
     const shopsPrompt =
-      'Search the web for physical stores selling: "' + identifiedItem + '" in ' + locText + '\n' +
-      'Look for vintage shops, consignment stores, sneaker boutiques, designer resellers in ' + locText + '\n' +
-      'If nothing in ' + locText + ', find nearest stores in surrounding area\n' +
-      'Reply ONLY JSON: {"shops":[{"name":"...","description":"...","address":"city, country","url":"https://...","tip":"..."},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."}]}';
+      'Search the web for: vintage shops consignment stores sneaker boutiques designer resellers in ' + locText + ' that sell "' + identifiedItem + '"\n' +
+      'Also search: "' + identifiedItem + '" winkel ' + locText + ' AND "' + identifiedItem + '" shop ' + locText + '\n' +
+      'Find 3 REAL stores with working websites. Include city in address. If nothing in ' + locText + ', find nearest.\n' +
+      'Reply ONLY JSON: {"shops":[{"name":"...","description":"1 sentence","address":"city, country","url":"https://...","tip":"why they might have it"},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."}]}';
 
     const [listingRes, shopRes] = await Promise.allSettled([
       fetch("/api/claude", {
