@@ -1,6 +1,23 @@
 export async function POST(request) {
   try {
     const body = await request.json();
+
+    // Add cache_control to last user message for prompt caching (50-90% cost reduction)
+    if (body.messages?.length > 0) {
+      const lastMsg = body.messages[body.messages.length - 1];
+      if (lastMsg.role === "user") {
+        if (typeof lastMsg.content === "string") {
+          lastMsg.content = [{
+            type: "text",
+            text: lastMsg.content,
+            cache_control: { type: "ephemeral" }
+          }];
+        } else if (Array.isArray(lastMsg.content) && lastMsg.content.length > 0) {
+          lastMsg.content[lastMsg.content.length - 1].cache_control = { type: "ephemeral" };
+        }
+      }
+    }
+
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -11,11 +28,10 @@ export async function POST(request) {
       },
       body: JSON.stringify(body),
     });
+
     const data = await response.json();
-    console.log("Anthropic response status:", response.status, JSON.stringify(data).slice(0, 200));
     return Response.json(data, { status: response.status });
   } catch (error) {
-    console.log("Error:", error.message);
     return Response.json({ error: error.message }, { status: 500 });
   }
 }
