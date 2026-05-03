@@ -1,6 +1,12 @@
 'use client';
 import { useState, useRef, useEffect } from "react";
 
+// Simple in-memory cache — survives page navigation, resets on refresh
+const searchCache = new Map();
+const CACHE_TTL = 1000 * 60 * 30; // 30 minutes
+const getCacheKey = (query, condition, quality, size, priceMin, priceMax, radius, location) =>
+  [query, condition, quality, size, priceMin, priceMax, radius, location].join("|").toLowerCase();
+
 const getContinent = c => ({ EU:"Europe", NA:"North America", SA:"South America", AS:"Asia", AF:"Africa", OC:"Oceania" }[c] || "your continent");
 const getFlag = c => !c ? "🌍" : c.toUpperCase().replace(/./g, x => String.fromCodePoint(x.charCodeAt(0)+127397));
 const getCurrency = cc => ({ GB:"£", US:"$", CA:"CA$", AU:"AU$", CH:"CHF", JP:"¥" }[cc] || "€");
@@ -249,6 +255,11 @@ export default function App() {
         }),
       });
       const d = await r.json();
+      if (d?.error?.type === "rate_limit_error") {
+        setError("⏳ Even wachten — te veel zoekopdrachten tegelijk. Probeer over 30 seconden opnieuw.");
+        setStep("upload");
+        return;
+      }
       const raw = (d.content?.[0]?.text || "").trim();
       const parsed = parseJSON(raw);
       let name = parsed?.name || "";
@@ -317,6 +328,17 @@ export default function App() {
     const shopType = condition==="new" ? "physical retail stores or boutiques" : "physical vintage, thrift, consignment or streetwear stores";
     const filters = [condText, qualText, sizeText, priceText].filter(Boolean).join(", ");
 
+    // Check cache first
+    const cacheKey = getCacheKey(activeQ, condition, quality, effSize, priceMin, priceMax, radius, locText);
+    const cached = searchCache.get(cacheKey);
+    if (cached && Date.now() - cached.ts < CACHE_TTL) {
+      setListings(cached.listings);
+      setShopResults(cached.shops);
+      setSearchPhase(3);
+      setStep("results");
+      return;
+    }
+
     const hasBudget = !!(priceMin || priceMax);
     const listingPrompt =
       'You are an expert reseller who knows exactly how to find items online. Find 3 REAL listings for: "' + activeQ + '".\n\n' +
@@ -326,7 +348,7 @@ export default function App() {
       'STEP 1: Think like an expert — what exact search terms would a specialist reseller use? Use model names, colorways, SKU codes, season codes, collab names.\n' +
       'STEP 2: Search the web using those expert terms on the listed platforms.\n' +
       (hasBudget ? 'STEP 2b: If nothing found within the price range, search WITHOUT the price filter and return the cheapest available options. It is better to show real results slightly outside budget than to return nothing.\n' : '') +
-      'STEP 3: Return REAL listings with real URLs. If you only find 1 or 2 listings, still return those. Never invent listings.\n\n' +
+      'STEP 3: Return REAL listings with real URLs. ONLY return listings that are currently ACTIVE and FOR SALE — skip anything marked as sold, unavailable, or out of stock. If you only find 1 or 2 active listings, still return those. Never invent listings.\n\n' +
       'Reply ONLY with JSON:\n' +
       '{"listings":[{"title":"exact listing title","price":"'+currency+'XX","platform":"site name","url":"https://real-url","condition":"condition","location":"city or country"},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
 
@@ -358,17 +380,33 @@ export default function App() {
 
     setSearchPhase(3);
 
+    let foundListings = [];
+    let foundShops = [];
+
     if (listingRes.status==="fulfilled") {
-      const txt = (listingRes.value.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+      const data = listingRes.value;
+      if (data?.error?.type === "rate_limit_error" || data?.type === "error" && data?.error?.type === "rate_limit_error") {
+        setError("⏳ Te veel zoekopdrachten tegelijk. Wacht even 30 seconden en probeer opnieuw.");
+        setStep("location");
+        return;
+      }
+      const txt = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
       const p = parseJSON(txt);
-      if (p?.listings?.length) setListings(p.listings.slice(0,3));
-    }
-    if (shopRes.status==="fulfilled") {
-      const txt = (shopRes.value.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
-      const p = parseJSON(txt);
-      if (p?.shops?.length) setShopResults(p.shops.slice(0,3));
+      if (p?.listings?.length) foundListings = p.listings.slice(0,3);
     }
 
+    if (shopRes.status==="fulfilled") {
+      const data = shopRes.value;
+      const txt = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+      const p = parseJSON(txt);
+      if (p?.shops?.length) foundShops = p.shops.slice(0,3);
+    }
+
+    // Save to cache
+    searchCache.set(cacheKey, { listings: foundListings, shops: foundShops, ts: Date.now() });
+
+    setListings(foundListings);
+    setShopResults(foundShops);
     setStep("results");
   };
 
