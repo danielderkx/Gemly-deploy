@@ -250,7 +250,7 @@ export default function App() {
           model:"claude-sonnet-4-5", max_tokens:400,
           messages:[{ role:"user", content:[
             { type:"image", source:{ type:"base64", media_type:mediaType, data:base64 } },
-            { type:"text", text:'You are a fashion and luxury goods expert. Identify the item as specifically as possible — include brand, model name, colorway, material, season/year if visible. Reply with ONLY a JSON object. Example: {"name":"Nike Air Max 90 Triple White sneakers","searchQuery":"Nike Air Max 90 Triple White","similarQuery":"white low-top sneakers","needsSize":true,"cat":"shoes"}. cat must be: tops, bottoms, dresses, shoes, kids, watches, jewelry, or null. needsSize true only for clothing/shoes. Include model numbers, colorways, collaborations if visible.' }
+            { type:"text", text:'Identify this item. Reply ONLY with JSON: {"name":"Nike Air Max 90 White","searchQuery":"Nike Air Max 90 White","similarQuery":"white sneakers","needsSize":true,"cat":"shoes"}. cat: tops/bottoms/dresses/shoes/kids/watches/jewelry/null. needsSize true only for clothing/shoes. Be specific — include brand, model, colorway.' }
           ]}]
         }),
       });
@@ -341,29 +341,22 @@ export default function App() {
 
     const hasBudget = !!(priceMin || priceMax);
     const listingPrompt =
-      'You are an expert reseller who knows exactly how to find items online. Find 3 REAL listings for: "' + activeQ + '".\n\n' +
-      'Filters: ' + filters + '\n' +
-      'Location: ' + locText + '\n' +
-      'Platforms to search: ' + platforms + '\n\n' +
-      'STEP 1: Think like an expert — what exact search terms would a specialist reseller use? Use model names, colorways, SKU codes, season codes, collab names.\n' +
-      'STEP 2: Search the web using those expert terms on the listed platforms.\n' +
-      (hasBudget ? 'STEP 2b: If nothing found within the price range, search WITHOUT the price filter and return the cheapest available options. It is better to show real results slightly outside budget than to return nothing.\n' : '') +
-      'STEP 3: Return REAL listings with real URLs. ONLY return listings that are currently ACTIVE and FOR SALE — skip anything marked as sold, unavailable, or out of stock. If you only find 1 or 2 active listings, still return those. Never invent listings.\n\n' +
-      'Reply ONLY with JSON:\n' +
-      '{"listings":[{"title":"exact listing title","price":"'+currency+'XX","platform":"site name","url":"https://real-url","condition":"condition","location":"city or country"},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
+      'Find 3 active listings for: "' + activeQ + '" — ' + filters + ' — in ' + locText + '.\n' +
+      'Search on: ' + platforms + '\n' +
+      (hasBudget ? 'If nothing in budget, show cheapest available instead.\n' : '') +
+      'Only ACTIVE listings, skip sold items. Real URLs only.\n' +
+      'JSON only: {"listings":[{"title":"...","price":"'+currency+'XX","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
 
     const shopsPrompt =
-      'You are a local shopping expert. Find 3 real physical ' + shopType + ' that are PHYSICALLY LOCATED in ' + locText + ' (this is strict — do NOT suggest stores outside this area).\n\n' +
-      'The item to find: "' + identifiedItem + '".\n\n' +
-      'Search for actual stores in ' + locText + '. If you cannot find stores in ' + locText + ', look for the nearest ones within ' + (radius==="country" ? "the same country" : radius==="continent" ? "the same continent" : "a reasonable distance") + '. Include the full city name in the address so the user knows exactly where it is.\n\n' +
-      'Reply ONLY with JSON:\n' +
-      '{"shops":[{"name":"store name","description":"1 sentence speciality","address":"full city + country","url":"https://website.com","tip":"specific reason this store might have it"},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."}]}';
+      'Find 3 real physical stores in ' + locText + ' that sell: "' + identifiedItem + '".\n' +
+      'Only stores INSIDE ' + locText + '. Include city in address.\n' +
+      'JSON only: {"shops":[{"name":"...","description":"...","address":"city, country","url":"https://...","tip":"..."},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."}]}';
 
     const [listingRes, shopRes] = await Promise.allSettled([
       fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
-          model:"claude-sonnet-4-5", max_tokens:2000,
+          model:"claude-sonnet-4-5", max_tokens:1000,
           tools:[{ type:"web_search_20250305", name:"web_search" }],
           messages:[{ role:"user", content: listingPrompt }]
         }),
@@ -371,7 +364,7 @@ export default function App() {
       fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
-          model:"claude-sonnet-4-5", max_tokens:1000,
+          model:"claude-sonnet-4-5", max_tokens:600,
           tools:[{ type:"web_search_20250305", name:"web_search" }],
           messages:[{ role:"user", content: shopsPrompt }]
         }),
