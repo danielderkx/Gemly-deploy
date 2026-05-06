@@ -8,7 +8,6 @@ const saveSearch = (query) => {
     const existing = JSON.parse(localStorage.getItem(SEARCHES_KEY) || "[]");
     const updated = [query, ...existing.filter(q => q !== query)].slice(0, 20);
     localStorage.setItem(SEARCHES_KEY, JSON.stringify(updated));
-    // Also bump global counter
     const count = parseInt(localStorage.getItem("gemly_search_count") || "0") + 1;
     localStorage.setItem("gemly_search_count", count);
   } catch {}
@@ -17,7 +16,6 @@ const getRecentSearches = () => {
   try { return JSON.parse(localStorage.getItem(SEARCHES_KEY) || "[]"); } catch { return []; }
 };
 
-// Sort listings by price ascending
 const sortByPrice = (listings) => {
   return [...listings].sort((a, b) => {
     const getNum = p => parseFloat((p || "").replace(/[^0-9.,]/g, "").replace(",", ".")) || 99999;
@@ -29,7 +27,6 @@ const getContinent = c => ({ EU:"Europe", NA:"North America", SA:"South America"
 const getFlag = c => !c ? "🌍" : c.toUpperCase().replace(/./g, x => String.fromCodePoint(x.charCodeAt(0)+127397));
 const getCurrency = cc => ({ GB:"£", US:"$", CA:"CA$", AU:"AU$", CH:"CHF", JP:"¥" }[cc] || "€");
 
-// If a listing URL looks fake/broken, generate a real search URL for that platform
 const getFallbackUrl = (platform, query) => {
   const q = encodeURIComponent(query);
   const p = (platform || "").toLowerCase();
@@ -55,20 +52,25 @@ const getSearchPlatforms = (condition, cc, radius, cont, category) => {
     if (condition === "new") return "Farfetch, SSENSE, END Clothing, Zalando, ASOS";
     return "Grailed (grailed.com), Depop, Vinted, Vestiaire Collective, eBay";
   }
+
   const isNew = condition === "new";
   if (isNew) {
     if (radius === "country") {
-      if (cc==="NL") return "Bijenkorf (debijenkorf.nl), Zalando, ASOS, Wehkamp, About You";
-      if (cc==="GB") return "ASOS, John Lewis, Selfridges, END Clothing";
-      if (cc==="US") return "Nordstrom, Saks Fifth Avenue, SSENSE, END Clothing, ASOS";
-      return "Zalando, ASOS, Farfetch, H&M";
+      if (cc==="NL") return "Zalando (zalando.nl), Bijenkorf (debijenkorf.nl), ASOS, Wehkamp, About You, H&M, Zara, Uniqlo, Nike.com, Adidas.com";
+      if (cc==="GB") return "ASOS, John Lewis (johnlewis.com), Selfridges, M&S, Next, Zara, H&M, Uniqlo, Nike.com, END Clothing";
+      if (cc==="US") return "Nordstrom, Saks Fifth Avenue, SSENSE, END Clothing, ASOS, Zara, H&M, Nike.com, Adidas.com";
+      if (cc==="DE") return "Zalando (zalando.de), About You, Otto, H&M, Zara, Uniqlo, Nike.com, Adidas.com";
+      if (cc==="FR") return "Zalando (zalando.fr), ASOS, H&M, Zara, Uniqlo, Galeries Lafayette, Nike.com";
+      return "Zalando, ASOS, H&M, Zara, Uniqlo, Nike.com, Adidas.com";
     }
     if (radius === "continent") {
-      if (cont==="EU"||cc==="NL"||cc==="GB"||cc==="DE"||cc==="FR") return "Farfetch, SSENSE, Net-a-Porter, Mytheresa, END Clothing, Zalando";
+      if (cont==="EU"||cc==="NL"||cc==="GB"||cc==="DE"||cc==="FR") return "Farfetch, SSENSE, Net-a-Porter, Mytheresa, END Clothing, Zalando, ASOS";
       return "Farfetch, Net-a-Porter, SSENSE, Nordstrom, END Clothing";
     }
-    return "Farfetch, SSENSE, Net-a-Porter, Mytheresa, END Clothing";
+    return "Farfetch, SSENSE, Net-a-Porter, Mytheresa, END Clothing, Zalando, ASOS";
   }
+
+  // Second-hand — unchanged
   if (radius === "country") {
     if (cc==="NL") return "Marktplaats (marktplaats.nl), Vinted NL (vinted.nl), Vestiaire Collective, eBay, Grailed, Depop";
     if (cc==="GB") return "eBay UK (ebay.co.uk), Vinted UK (vinted.co.uk), Depop, Vestiaire Collective, Grailed";
@@ -346,7 +348,6 @@ export default function App() {
       setStep("match_type");
       fetchPriceEst(finalName);
     } catch {
-      // Fallback: use text as-is
       const words = name.split(" ");
       setIdentifiedItem(name); setSearchQuery(name);
       setSimilarQuery(words.length>1 ? words.slice(1).join(" ") : name);
@@ -388,9 +389,14 @@ export default function App() {
     const shopType = condition==="new" ? "physical retail stores or boutiques" : "physical vintage, thrift, consignment or streetwear stores";
     const filters = [condText, qualText, sizeText, priceText].filter(Boolean).join(", ");
 
-    const hasBudget = !!(priceMin || priceMax);
+    // For first-hand: explicitly guide search toward retail webshops first
+    const newItemInstruction = condition === "new"
+      ? 'Priority: search official brand websites and established retail webshops first (e.g. Zalando, ASOS, brand sites). These are new items sold by retailers, not resellers.\n'
+      : '';
+
     const listingPrompt =
       'Search the web for listings of: "' + activeQ + '" on ' + platforms + '\n' +
+      newItemInstruction +
       'Preferred filters: ' + filters + ', location: ' + locText + '\n\n' +
       'RULES:\n' +
       '1. Search and find REAL listings — copy exact URLs from your search results\n' +
