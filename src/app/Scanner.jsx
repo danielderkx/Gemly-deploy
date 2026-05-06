@@ -246,6 +246,7 @@ export default function App() {
   const [priceEst, setPriceEst] = useState(null);
   const [priceEstLoading, setPriceEstLoading] = useState(false);
   const [searchPhase, setSearchPhase] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
   const fileRef = useRef();
   const camRef = useRef();
 
@@ -455,6 +456,48 @@ export default function App() {
     setShopResults(foundShops);
     if (foundListings.length > 0) saveSearch(identifiedItem);
     setStep("results");
+  };
+
+  const loadMoreListings = async () => {
+    setLoadingMore(true);
+    const locText = !userLocation ? "worldwide" : radius==="country" ? userLocation.country : radius==="continent" ? userLocation.continent : "worldwide";
+    const condText = condition==="new" ? "brand new" : condition==="used" ? "second-hand/pre-owned" : "new or used";
+    const qualText = condition==="new" ? "" : (QUALITY_OPTS.find(q=>q.val===quality)?.label || "");
+    const sizeText = effSize ? "size "+effSize : "";
+    const priceText = (priceMin||priceMax) ? "price "+currency+(priceMin||"0")+"-"+currency+(priceMax||"any") : "";
+    const platforms = getSearchPlatforms(condition, userLocation?.countryCode, radius, userLocation?.continentCode, itemCategory);
+    const filters = [condText, qualText, sizeText, priceText].filter(Boolean).join(", ");
+    const newItemInstruction = condition === "new"
+      ? 'Priority: search official brand websites and established retail webshops first (e.g. Zalando, ASOS, brand sites). These are new items sold by retailers, not resellers.\n'
+      : '';
+    const alreadyShown = listings.map(l => l.url).filter(Boolean).join(", ");
+
+    const prompt =
+      'Search the web for listings of: "' + activeQ + '" on ' + platforms + '\n' +
+      newItemInstruction +
+      'Preferred filters: ' + filters + ', location: ' + locText + '\n\n' +
+      'IMPORTANT: Do NOT return any of these URLs that were already shown: ' + alreadyShown + '\n\n' +
+      'RULES:\n' +
+      '1. Find 3 NEW listings not yet shown to the user — different sellers, different platforms if possible\n' +
+      '2. Copy exact URLs from your search results\n' +
+      '3. If filters are too strict, relax them one by one\n\n' +
+      'Reply ONLY JSON: {"listings":[{"title":"...","price":"'+currency+'XX","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
+
+    try {
+      const r = await fetch("/api/claude", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({
+          model:"claude-sonnet-4-5", max_tokens:1000,
+          tools:[{ type:"web_search_20250305", name:"web_search", max_uses:3 }],
+          messages:[{ role:"user", content: prompt }]
+        }),
+      });
+      const data = await r.json();
+      const txt = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+      const p = parseJSON(txt);
+      if (p?.listings?.length) setListings(sortByPrice(p.listings.slice(0,3)));
+    } catch {}
+    setLoadingMore(false);
   };
 
   const reset = () => {
@@ -796,6 +839,16 @@ export default function App() {
                 </div>
               </div>
             ))}
+            <button
+              onClick={loadMoreListings}
+              disabled={loadingMore}
+              style={{width:"100%",background:"none",border:"1.5px dashed #D9D0C3",borderRadius:10,padding:".75rem",fontSize:12,fontFamily:"'Nunito',sans-serif",fontWeight:600,color:loadingMore?"#C9C2B8":"#A89880",cursor:loadingMore?"not-allowed":"pointer",letterSpacing:".1em",textTransform:"uppercase",transition:"all .2s",marginBottom:".85rem",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}
+              onMouseEnter={e=>{if(!loadingMore){e.currentTarget.style.borderColor="#C4924A";e.currentTarget.style.color="#C4924A";}}}
+              onMouseLeave={e=>{e.currentTarget.style.borderColor="#D9D0C3";e.currentTarget.style.color=loadingMore?"#C9C2B8":"#A89880";}}>
+              {loadingMore
+                ? <><div style={{width:12,height:12,border:"1.5px solid #D9D0C3",borderTopColor:"#C4924A",borderRadius:"50%",animation:"spin 1s linear infinite"}}/> Searching…</>
+                : <>↻ Show 3 new results</>}
+            </button>
             <div className="divgem"><span className="gem">{condition==="new"?"🏪":"💎"}</span></div>
             <div className="sec-title"><span>{condition==="new"?"Physical stores":"Hidden gem shops"}</span></div>
             {condition!=="new"&&shopResults.length>0&&(
