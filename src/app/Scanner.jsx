@@ -42,48 +42,68 @@ const getFallbackUrl = (platform, query) => {
 };
 
 const getSearchPlatforms = (condition, cc, radius, cont, category) => {
-  if (category === "watches") return "Chrono24 (chrono24.com), Watchfinder (watchfinder.com), eBay, Catawiki";
-  if (category === "jewelry") return "1stDibs (1stdibs.com), Etsy, eBay, Vestiaire Collective, Catawiki";
+  const isEU = cont==="EU" || ["NL","BE","DE","FR","ES","IT","PT","SE","DK","NO","FI","PL","AT","CH"].includes(cc);
+
+  if (category === "watches") {
+    if (condition === "new") return "Chrono24 (chrono24.com), Watchfinder (watchfinder.com), Watches of Switzerland, official brand websites";
+    return "Chrono24 (chrono24.com), Watchfinder (watchfinder.com), eBay, Catawiki, Watchbox";
+  }
+  if (category === "jewelry") {
+    if (condition === "new") return "1stDibs (1stdibs.com), official brand websites, VRAI, Mejuri";
+    return "1stDibs (1stdibs.com), Etsy, eBay, Vestiaire Collective, Catawiki";
+  }
   if (category === "shoes") {
-    if (condition === "new") return "StockX (stockx.com), GOAT (goat.com), Farfetch, Zalando, END Clothing";
+    if (condition === "new") {
+      if (isEU) return "Zalando, ASOS, Foot Locker (footlocker.eu), Snipes (snipes.com), Courir, About You, Sizeer, official brand websites (Nike.com, Adidas.com, New Balance)";
+      return "StockX (stockx.com), GOAT (goat.com), Foot Locker, ASOS, Farfetch, official brand websites";
+    }
+    if (isEU) return "Vinted (vinted.nl / vinted.fr / vinted.de), Marktplaats (marktplaats.nl), eBay, Vestiaire Collective, StockX (stockx.com), GOAT (goat.com), Depop, Grailed (grailed.com)";
     return "StockX (stockx.com), GOAT (goat.com), eBay, Vinted, Vestiaire Collective, Grailed (grailed.com), Depop";
   }
   if (category === "tops" || category === "bottoms" || category === "dresses") {
-    if (condition === "new") return "Farfetch, SSENSE, END Clothing, Zalando, ASOS";
+    if (condition === "new") {
+      if (isEU) return "Zalando, ASOS, About You, H&M, Zara, Uniqlo, Cos, & Other Stories, Mango, Farfetch, END Clothing";
+      return "ASOS, Farfetch, SSENSE, END Clothing, Zalando, H&M, Zara";
+    }
+    if (isEU) return "Vinted (vinted.nl / vinted.fr / vinted.de), Marktplaats (marktplaats.nl), Depop, Vestiaire Collective, eBay, Grailed (grailed.com), Sellpy (sellpy.nl)";
     return "Grailed (grailed.com), Depop, Vinted, Vestiaire Collective, eBay";
   }
 
   const isNew = condition === "new";
   if (isNew) {
     if (radius === "country") {
-      if (cc==="NL") return "Zalando (zalando.nl), Bijenkorf (debijenkorf.nl), ASOS, Wehkamp, About You, H&M, Zara, Uniqlo, Nike.com, Adidas.com";
-      if (cc==="GB") return "ASOS, John Lewis (johnlewis.com), Selfridges, M&S, Next, Zara, H&M, Uniqlo, Nike.com, END Clothing";
-      if (cc==="US") return "Nordstrom, Saks Fifth Avenue, SSENSE, END Clothing, ASOS, Zara, H&M, Nike.com, Adidas.com";
-      if (cc==="DE") return "Zalando (zalando.de), About You, Otto, H&M, Zara, Uniqlo, Nike.com, Adidas.com";
-      if (cc==="FR") return "Zalando (zalando.fr), ASOS, H&M, Zara, Uniqlo, Galeries Lafayette, Nike.com";
-      return "Zalando, ASOS, H&M, Zara, Uniqlo, Nike.com, Adidas.com";
+      if (cc==="NL") return "Zalando (zalando.nl), Bijenkorf (debijenkorf.nl), Wehkamp (wehkamp.nl), Bol.com, ASOS, About You, H&M (hm.com), Zara (zara.com), Uniqlo, Cos, Mango, Nike.com, Adidas.com";
+      if (cc==="BE") return "Zalando (zalando.be), 2dehands (2dehands.be — new section), bol.com, ASOS, H&M, Zara, Uniqlo, Nike.com, Adidas.com";
+      if (cc==="GB") return "ASOS, John Lewis (johnlewis.com), Selfridges, M&S, Next, Zara, H&M, Uniqlo, Nike.com, END Clothing, Flannels";
+      if (cc==="US") return "Nordstrom, Saks Fifth Avenue, SSENSE, END Clothing, ASOS, Zara, H&M, Nike.com, Adidas.com, Bloomingdale's";
+      if (cc==="DE") return "Zalando (zalando.de), About You (aboutyou.de), Otto (otto.de), H&M, Zara, Uniqlo, Nike.com, Adidas.com, Breuninger";
+      if (cc==="FR") return "Zalando (zalando.fr), ASOS, H&M, Zara, Uniqlo, Galeries Lafayette, Le Bon Marché, Mango, Nike.com";
+      if (cc==="ES") return "Zalando (zalando.es), ASOS, Zara, H&M, Mango, El Corte Inglés, Nike.com, Adidas.com";
+      return "Zalando, ASOS, H&M, Zara, Uniqlo, Nike.com, Adidas.com, About You";
     }
     if (radius === "continent") {
-      if (cont==="EU"||cc==="NL"||cc==="GB"||cc==="DE"||cc==="FR") return "Farfetch, SSENSE, Net-a-Porter, Mytheresa, END Clothing, Zalando, ASOS";
-      return "Farfetch, Net-a-Porter, SSENSE, Nordstrom, END Clothing";
+      if (isEU) return "Zalando, ASOS, Farfetch (farfetch.com), Net-a-Porter (net-a-porter.com), Mytheresa (mytheresa.com), END Clothing (endclothing.com), About You, SSENSE, Cos, & Other Stories, H&M, Zara, Uniqlo";
+      return "Farfetch, Net-a-Porter, SSENSE, Nordstrom, END Clothing, ASOS";
     }
-    return "Farfetch, SSENSE, Net-a-Porter, Mytheresa, END Clothing, Zalando, ASOS";
+    return "Farfetch, SSENSE, Net-a-Porter, Mytheresa, END Clothing, Zalando, ASOS, Uniqlo";
   }
 
-  // Second-hand — unchanged
+  // Second-hand
   if (radius === "country") {
-    if (cc==="NL") return "Marktplaats (marktplaats.nl), Vinted NL (vinted.nl), Vestiaire Collective, eBay, Grailed, Depop";
-    if (cc==="GB") return "eBay UK (ebay.co.uk), Vinted UK (vinted.co.uk), Depop, Vestiaire Collective, Grailed";
-    if (cc==="DE") return "eBay, Vinted DE, Vestiaire Collective, Grailed";
-    if (cc==="FR") return "Vinted FR, Le Bon Coin (leboncoin.fr), Vestiaire Collective, eBay";
+    if (cc==="NL") return "Marktplaats (marktplaats.nl), Vinted NL (vinted.nl), Sellpy NL (sellpy.nl), Depop, eBay.nl, Vestiaire Collective, Grailed (grailed.com)";
+    if (cc==="BE") return "2dehands (2dehands.be), Vinted BE (vinted.be), eBay, Vestiaire Collective, Depop";
+    if (cc==="GB") return "eBay UK (ebay.co.uk), Vinted UK (vinted.co.uk), Depop, Vestiaire Collective, Grailed, Preloved";
+    if (cc==="DE") return "Kleinanzeigen (kleinanzeigen.de), Vinted DE (vinted.de), eBay.de, Vestiaire Collective, Sellpy, Grailed";
+    if (cc==="FR") return "Vinted FR (vinted.fr), Le Bon Coin (leboncoin.fr), Vestiaire Collective, eBay.fr, Vide Dressing (videdressing.com)";
+    if (cc==="ES") return "Wallapop (wallapop.com), Vinted ES, Vestiaire Collective, eBay.es, Micolet";
     if (cc==="US") return "Grailed (grailed.com), Poshmark, Depop, The RealReal, StockX, eBay";
     return "eBay, Vinted, Grailed, Depop, Vestiaire Collective";
   }
   if (radius === "continent") {
-    if (cont==="EU"||cc==="NL"||cc==="GB"||cc==="DE"||cc==="FR") return "eBay, Vinted, Grailed, Depop, Vestiaire Collective, Marktplaats, Catawiki";
+    if (isEU) return "Vinted (vinted.nl / vinted.fr / vinted.de / vinted.be), eBay (ebay.nl / ebay.de / ebay.co.uk), Vestiaire Collective (vestiairecollective.com), Depop, Grailed (grailed.com), Marktplaats (marktplaats.nl), Sellpy (sellpy.nl), Wallapop (wallapop.com), Catawiki (catawiki.com), Kleinanzeigen (kleinanzeigen.de), Le Bon Coin (leboncoin.fr)";
     return "eBay, Grailed, Poshmark, Depop, The RealReal, StockX";
   }
-  return "eBay, Grailed (grailed.com), Vestiaire Collective, Depop, The RealReal, Poshmark, StockX, Catawiki";
+  return "eBay, Grailed (grailed.com), Vestiaire Collective, Depop, The RealReal, Poshmark, StockX, Catawiki, Vinted";
 };
 
 const parseJSON = text => {
@@ -390,21 +410,23 @@ export default function App() {
     const shopType = condition==="new" ? "physical retail stores or boutiques" : "physical vintage, thrift, consignment or streetwear stores";
     const filters = [condText, qualText, sizeText, priceText].filter(Boolean).join(", ");
 
-    // For first-hand: explicitly guide search toward retail webshops first
     const newItemInstruction = condition === "new"
-      ? 'Priority: search official brand websites and established retail webshops first (e.g. Zalando, ASOS, brand sites). These are new items sold by retailers, not resellers.\n'
+      ? 'Priority: search official brand websites and established retail webshops first. These are new items sold by retailers — not resellers or auction sites.\n'
       : '';
 
     const listingPrompt =
-      'Search the web for listings of: "' + activeQ + '" on ' + platforms + '\n' +
+      'Search the web for real listings of: "' + activeQ + '"\n' +
+      'Search on these platforms: ' + platforms + '\n' +
       newItemInstruction +
-      'Preferred filters: ' + filters + ', location: ' + locText + '\n\n' +
-      'RULES:\n' +
-      '1. Search and find REAL listings — copy exact URLs from your search results\n' +
-      '2. If nothing found with all filters, relax filters one by one (first location, then size, then price)\n' +
-      '3. Always return 3 listings — even if not perfect match, show closest available\n' +
-      '4. Only use URLs that actually appeared in search results\n\n' +
-      'Reply ONLY JSON: {"listings":[{"title":"...","price":"'+currency+'XX","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
+      'Filters: ' + filters + '\n' +
+      'LOCATION: Listings must be available in or ship to ' + locText + '. Only return results from sellers or platforms operating in ' + locText + '.\n\n' +
+      'CRITICAL RULES:\n' +
+      '1. ONLY return real, active product listing pages — never return homepage URLs, category pages, or search result pages\n' +
+      '2. NEVER return a listing with title like "Unable to find", "N/A", or any explanation — if you cannot find 3 results, relax size filter first, then price filter, then location\n' +
+      '3. Copy the exact URL of each individual listing from your search results\n' +
+      '4. Each listing must have a real price (e.g. "€89") — not "N/A"\n\n' +
+      'Reply ONLY with this JSON (no extra text):\n' +
+      '{"listings":[{"title":"...","price":"'+currency+'XX","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
 
     const shopsPrompt =
       'Name 3 real physical ' + shopType + ' in ' + locText + ' that would carry: "' + identifiedItem + '". Use your knowledge of physical stores. Include city in address. Find nearest if none in ' + locText + '.\n' +
@@ -473,15 +495,19 @@ export default function App() {
     const alreadyShown = listings.map(l => l.url).filter(Boolean).join(", ");
 
     const prompt =
-      'Search the web for listings of: "' + activeQ + '" on ' + platforms + '\n' +
+      'Search the web for real listings of: "' + activeQ + '"\n' +
+      'Search on these platforms: ' + platforms + '\n' +
       newItemInstruction +
-      'Preferred filters: ' + filters + ', location: ' + locText + '\n\n' +
-      'IMPORTANT: Do NOT return any of these URLs that were already shown: ' + alreadyShown + '\n\n' +
-      'RULES:\n' +
-      '1. Find 3 NEW listings not yet shown to the user — different sellers, different platforms if possible\n' +
-      '2. Copy exact URLs from your search results\n' +
-      '3. If filters are too strict, relax them one by one\n\n' +
-      'Reply ONLY JSON: {"listings":[{"title":"...","price":"'+currency+'XX","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
+      'Filters: ' + filters + '\n' +
+      'LOCATION: Listings must be available in or ship to ' + locText + '. Only return results from sellers or platforms operating in ' + locText + '.\n\n' +
+      'Already shown to user — do NOT repeat these URLs: ' + alreadyShown + '\n\n' +
+      'CRITICAL RULES:\n' +
+      '1. Find 3 DIFFERENT listings not yet shown — different sellers or platforms if possible\n' +
+      '2. ONLY return real, active listing pages — never homepages, category pages, or search pages\n' +
+      '3. NEVER return a listing with title like "Unable to find" or price "N/A" — relax size/price filters if needed\n' +
+      '4. Each listing must have a real price (e.g. "€89")\n\n' +
+      'Reply ONLY with this JSON (no extra text):\n' +
+      '{"listings":[{"title":"...","price":"'+currency+'XX","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
 
     try {
       const r = await fetch("/api/claude", {
