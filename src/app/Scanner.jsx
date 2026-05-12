@@ -385,6 +385,7 @@ export default function App() {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
           model:"claude-haiku-4-5", max_tokens:150,
+          messages:[{ role:"user", content:'Estimate second-hand resale price for: "' + name + '". Reply ONLY JSON: {"min":50,"max":120,"rarity":"common","tip":"short tip"}. rarity: common/uncommon/rare/very_rare.' }]
         }),
       });
       const d = await r.json();
@@ -401,7 +402,15 @@ export default function App() {
   const handleSearch = async () => {
     setStep("searching"); setSearchPhase(1); setError("");
     setListings([]); setShopResults([]);
+
+    // Online listings: use radius-based location
     const locText = !userLocation ? "worldwide" : radius==="country" ? userLocation.country : radius==="continent" ? userLocation.continent : "worldwide";
+
+    // *** FIX 1: Shops ALWAYS use the user's city (never country/continent) ***
+    const shopCity = userLocation?.city
+      ? userLocation.city + ", " + userLocation.country
+      : userLocation?.country || "your area";
+
     const condText = condition==="new" ? "brand new" : condition==="used" ? "second-hand/pre-owned" : "new or used";
     const qualText = condition==="new" ? "" : (QUALITY_OPTS.find(q=>q.val===quality)?.label || "");
     const sizeText = effSize ? "size "+effSize : "";
@@ -428,9 +437,15 @@ export default function App() {
       'Reply ONLY with this JSON (no extra text):\n' +
       '{"listings":[{"title":"...","price":"'+currency+'XX","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
 
+    // *** FIX 2: Shops use web search (max 2 uses) so it finds real local stores ***
     const shopsPrompt =
-      'Name 3 real physical ' + shopType + ' in ' + locText + ' that would carry: "' + identifiedItem + '". Use your knowledge of physical stores. Include city in address. Find nearest if none in ' + locText + '.\n' +
-      'Reply ONLY JSON: {"shops":[{"name":"...","description":"1 sentence","address":"city, country","url":"https://...","tip":"why they might have it"},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."}]}';
+      'Search the web for real physical ' + shopType + ' located in ' + shopCity + ' that are likely to carry: "' + identifiedItem + '".\n' +
+      'Search for: ' + shopType + ' ' + shopCity + ' "' + identifiedItem + '"\n' +
+      'RULES:\n' +
+      '- Only return stores physically located in ' + shopCity + '. Do NOT suggest stores in other cities or countries.\n' +
+      '- If you cannot find stores in ' + shopCity + ', find the nearest ones and clearly state their city in the address.\n' +
+      '- Include the store\'s real website URL.\n' +
+      'Reply ONLY JSON: {"shops":[{"name":"...","description":"1 sentence about what they sell","address":"city, country","url":"https://...","tip":"why they might carry this item"},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."}]}';
 
     const [listingRes, shopRes] = await Promise.allSettled([
       fetch("/api/claude", {
@@ -441,10 +456,12 @@ export default function App() {
           messages:[{ role:"user", content: listingPrompt }]
         }),
       }).then(r=>r.json()),
+      // *** FIX 2: Haiku + web_search with max_uses:2 for cost control ***
       fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
-          model:"claude-haiku-4-5", max_tokens:400,
+          model:"claude-haiku-4-5", max_tokens:600,
+          tools:[{ type:"web_search_20250305", name:"web_search", max_uses:2 }],
           messages:[{ role:"user", content: shopsPrompt }]
         }),
       }).then(r=>r.json()),
