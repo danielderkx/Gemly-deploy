@@ -406,7 +406,6 @@ export default function App() {
     // Online listings: use radius-based location
     const locText = !userLocation ? "worldwide" : radius==="country" ? userLocation.country : radius==="continent" ? userLocation.continent : "worldwide";
 
-    // *** FIX 1: Shops ALWAYS use the user's city (never country/continent) ***
     const shopCity = userLocation?.city
       ? userLocation.city + ", " + userLocation.country
       : userLocation?.country || "your area";
@@ -439,13 +438,8 @@ export default function App() {
 
     // *** FIX 2: Shops use web search (max 2 uses) so it finds real local stores ***
     const shopsPrompt =
-      'Search the web for real physical ' + shopType + ' located in ' + shopCity + ' that are likely to carry: "' + identifiedItem + '".\n' +
-      'Search for: ' + shopType + ' ' + shopCity + ' "' + identifiedItem + '"\n' +
-      'RULES:\n' +
-      '- Only return stores physically located in ' + shopCity + '. Do NOT suggest stores in other cities or countries.\n' +
-      '- If you cannot find stores in ' + shopCity + ', find the nearest ones and clearly state their city in the address.\n' +
-      '- Include the store\'s real website URL.\n' +
-      'Reply ONLY JSON: {"shops":[{"name":"...","description":"1 sentence about what they sell","address":"city, country","url":"https://...","tip":"why they might carry this item"},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."}]}';
+      'Name 3 real physical ' + shopType + ' in ' + shopCity + ' that would carry: "' + identifiedItem + '". Use your knowledge of physical stores. Include city in address. Find nearest if none in ' + shopCity + '.\n' +
+      'Reply ONLY JSON: {"shops":[{"name":"...","description":"1 sentence","address":"city, country","url":"https://...","tip":"why they might have it"},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."}]}';
 
     const [listingRes, shopRes] = await Promise.allSettled([
       fetch("/api/claude", {
@@ -456,12 +450,11 @@ export default function App() {
           messages:[{ role:"user", content: listingPrompt }]
         }),
       }).then(r=>r.json()),
-      // *** FIX 2: Haiku + web_search with max_uses:2 for cost control ***
+      // Shops: Haiku without web search (original)
       fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
-          model:"claude-haiku-4-5", max_tokens:600,
-          tools:[{ type:"web_search_20250305", name:"web_search", max_uses:2 }],
+          model:"claude-haiku-4-5", max_tokens:400,
           messages:[{ role:"user", content: shopsPrompt }]
         }),
       }).then(r=>r.json()),
