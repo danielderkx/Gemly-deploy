@@ -441,53 +441,51 @@ export default function App() {
       'Name 3 real physical ' + shopType + ' in ' + shopCity + ' that would carry: "' + identifiedItem + '". Use your knowledge of physical stores. Include city in address. Find nearest if none in ' + shopCity + '.\n' +
       'Reply ONLY JSON: {"shops":[{"name":"...","description":"1 sentence","address":"city, country","url":"https://...","tip":"why they might have it"},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."}]}';
 
-    const [listingRes, shopRes] = await Promise.allSettled([
-      fetch("/api/claude", {
+    // Run listings first, then shops — prevents rate limiting from parallel calls
+    let foundListings = [];
+    let foundShops = [];
+
+    try {
+      const listingData = await fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
           model:"claude-sonnet-4-5", max_tokens:1000,
           tools:[{ type:"web_search_20250305", name:"web_search", max_uses:3 }],
           messages:[{ role:"user", content: listingPrompt }]
         }),
-      }).then(r=>r.json()),
-      // Shops: Haiku without web search (original)
-      fetch("/api/claude", {
+      }).then(r=>r.json());
+
+      if (listingData?.error?.type === "rate_limit_error") {
+        setError("⏳ Te veel zoekopdrachten tegelijk. Wacht even 30 seconden en probeer opnieuw.");
+        setStep("location");
+        return;
+      }
+      const listingTxt = (listingData.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+      const listingParsed = parseJSON(listingTxt);
+      if (listingParsed?.listings?.length) foundListings = listingParsed.listings.slice(0,3);
+    } catch {}
+
+    setSearchPhase(3);
+
+    // Show listings immediately, load shops in background
+    setListings(sortByPrice(foundListings));
+    if (foundListings.length > 0) saveSearch(identifiedItem);
+    setStep("results");
+
+    try {
+      const shopData = await fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
           model:"claude-haiku-4-5", max_tokens:400,
           messages:[{ role:"user", content: shopsPrompt }]
         }),
-      }).then(r=>r.json()),
-    ]);
+      }).then(r=>r.json());
+      const shopTxt = (shopData.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+      const shopParsed = parseJSON(shopTxt);
+      if (shopParsed?.shops?.length) foundShops = shopParsed.shops.slice(0,3);
+    } catch {}
 
-    setSearchPhase(3);
-
-    let foundListings = [];
-    let foundShops = [];
-
-    if (listingRes.status==="fulfilled") {
-      const data = listingRes.value;
-      if (data?.error?.type === "rate_limit_error" || data?.type === "error" && data?.error?.type === "rate_limit_error") {
-        setError("⏳ Te veel zoekopdrachten tegelijk. Wacht even 30 seconden en probeer opnieuw.");
-        setStep("location");
-        return;
-      }
-      const txt = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
-      const p = parseJSON(txt);
-      if (p?.listings?.length) foundListings = p.listings.slice(0,3);
-    }
-
-    if (shopRes.status==="fulfilled") {
-      const data = shopRes.value;
-      const txt = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
-      const p = parseJSON(txt);
-      if (p?.shops?.length) foundShops = p.shops.slice(0,3);
-    }
-
-    setListings(sortByPrice(foundListings));
     setShopResults(foundShops);
-    if (foundListings.length > 0) saveSearch(identifiedItem);
-    setStep("results");
   };
 
   const loadMoreListings = async () => {
