@@ -53,7 +53,7 @@ export default function LandingPage() {
           <p style={{ fontSize:14, fontWeight:300, color:'#8A8070', lineHeight:1.8, marginBottom:'2.5rem', maxWidth:380 }}>
             Scan any item and find the best secondhand deal — or new if nothing's available. Across every major platform, filtered to you.
           </p>
-          <a href="/login" className="cta-btn">Start scanning</a>
+          <a href="/scan" className="cta-btn">Start scanning</a>
         </div>
 
         {/* Right — phone mockup */}
