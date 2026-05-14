@@ -1,7 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from "react";
 
-// Recent searches — stored in localStorage
 const SEARCHES_KEY = "gemly_recent_searches";
 const saveSearch = (query) => {
   try {
@@ -43,7 +42,6 @@ const getFallbackUrl = (platform, query) => {
 
 const getSearchPlatforms = (condition, cc, radius, cont, category) => {
   const isEU = cont==="EU" || ["NL","BE","DE","FR","ES","IT","PT","SE","DK","NO","FI","PL","AT","CH"].includes(cc);
-
   if (category === "watches") {
     if (condition === "new") return "Chrono24 (chrono24.com), Watchfinder (watchfinder.com), Watches of Switzerland, official brand websites";
     return "Chrono24 (chrono24.com), Watchfinder (watchfinder.com), eBay, Catawiki, Watchbox";
@@ -68,7 +66,6 @@ const getSearchPlatforms = (condition, cc, radius, cont, category) => {
     if (isEU) return "Vinted (vinted.nl / vinted.fr / vinted.de), Marktplaats (marktplaats.nl), Depop, Vestiaire Collective, eBay, Grailed (grailed.com), Sellpy (sellpy.nl)";
     return "Grailed (grailed.com), Depop, Vinted, Vestiaire Collective, eBay";
   }
-
   const isNew = condition === "new";
   if (isNew) {
     if (radius === "country") {
@@ -87,8 +84,6 @@ const getSearchPlatforms = (condition, cc, radius, cont, category) => {
     }
     return "Farfetch, SSENSE, Net-a-Porter, Mytheresa, END Clothing, Zalando, ASOS, Uniqlo";
   }
-
-  // Second-hand
   if (radius === "country") {
     if (cc==="NL") return "Marktplaats (marktplaats.nl), Vinted NL (vinted.nl), Sellpy NL (sellpy.nl), Depop, eBay.nl, Vestiaire Collective, Grailed (grailed.com)";
     if (cc==="BE") return "2dehands (2dehands.be), Vinted BE (vinted.be), eBay, Vestiaire Collective, Depop";
@@ -136,104 +131,164 @@ const QUALITY_OPTS = [
 const STEP_ORDER = ["match_type","size","condition","quality","price","location","results"];
 
 const S = `
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400;1,500&family=Nunito:wght@300;400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500&display=swap');
   * { box-sizing:border-box; }
-  .app { font-family:'Nunito',sans-serif; background:#FDFAF6; border-radius:20px; padding:2.5rem 2rem; border:1px solid #EDE8DF; }
-  .app-header { text-align:center; margin-bottom:2rem; padding-bottom:1.5rem; border-bottom:1px solid #EDE8DF; position:relative; }
-  .app-header::after { content:''; position:absolute; bottom:-1px; left:50%; transform:translateX(-50%); width:48px; height:2px; background:#C4924A; border-radius:2px; }
-  .app-title { font-family:'Playfair Display',serif; font-size:30px; font-weight:400; font-style:italic; color:#2C2417; margin:0 0 5px; }
-  .app-sub { font-size:11px; color:#A89880; letter-spacing:.18em; text-transform:uppercase; margin:0; font-weight:500; }
-  .progress-row { display:flex; gap:5px; margin-bottom:1.75rem; }
-  .pdot { flex:1; height:3px; border-radius:3px; background:#EDE8DF; transition:background .4s; }
-  .pdot.done { background:#C4924A; opacity:.5; } .pdot.active { background:#C4924A; }
-  .drop-zone { border:1.5px dashed #D9D0C3; border-radius:16px; padding:2.5rem 1.5rem; text-align:center; cursor:pointer; transition:all .2s; background:#FBF8F3; }
-  .drop-zone:hover,.drop-zone.active { border-color:#C4924A; background:#FDF6EC; }
-  .drop-icon { width:52px; height:52px; border-radius:50%; background:#F2EBE0; margin:0 auto .85rem; display:flex; align-items:center; justify-content:center; }
-  .drop-zone:hover .drop-icon { background:#EDD9BF; }
+
+  /* Base */
+  .app { font-family:'Outfit',sans-serif; background:#fff; border-radius:0; padding:2rem 1.75rem; }
+  .app-header { text-align:center; margin-bottom:2rem; padding-bottom:1.5rem; border-bottom:1px solid #EDEAE4; }
+  .app-title { font-family:'Outfit',sans-serif; font-size:18px; font-weight:400; letter-spacing:.14em; text-transform:uppercase; color:#1A1612; margin:0 0 4px; }
+  .app-sub { font-size:10px; color:#9A9080; letter-spacing:.2em; text-transform:uppercase; margin:0; font-weight:300; }
+
+  /* Progress */
+  .progress-row { display:flex; gap:4px; margin-bottom:1.75rem; }
+  .pdot { flex:1; height:2px; background:#EDEAE4; transition:background .4s; }
+  .pdot.done { background:#C8C0B4; }
+  .pdot.active { background:#1A1612; }
+
+  /* Drop zone */
+  .drop-zone { border:1px solid #EDEAE4; border-radius:4px; padding:2.5rem 1.5rem; text-align:center; cursor:pointer; transition:all .2s; background:#F5F0E8; }
+  .drop-zone:hover,.drop-zone.active { border-color:#1A1612; background:#EDE6D6; }
+  .drop-icon { width:48px; height:48px; border-radius:50%; background:#E8E0D2; margin:0 auto .85rem; display:flex; align-items:center; justify-content:center; }
+  .drop-zone:hover .drop-icon { background:#D8D0C2; }
+
+  /* Inputs */
   .search-row { display:flex; gap:8px; }
-  .search-input { border:1.5px solid #EDE8DF; border-radius:10px; padding:.75rem 1rem; font-size:14px; font-family:'Nunito',sans-serif; flex:1; background:#FFF; color:#2C2417; outline:none; transition:border-color .2s; }
-  .search-input:focus { border-color:#C4924A; box-shadow:0 0 0 3px rgba(196,146,74,.08); }
-  .search-input::placeholder { color:#C2B9AE; }
-  .search-btn { background:#2C2417; color:#FDFAF6; border:none; border-radius:10px; padding:.75rem 1.1rem; font-size:13px; font-family:'Nunito',sans-serif; font-weight:600; cursor:pointer; white-space:nowrap; }
-  .search-btn:disabled { background:#C9C2B8; cursor:not-allowed; }
-  .btn-primary { background:#2C2417; color:#FDFAF6; border:none; border-radius:10px; padding:.85rem 1.5rem; font-size:12px; font-family:'Nunito',sans-serif; font-weight:600; letter-spacing:.14em; text-transform:uppercase; cursor:pointer; transition:all .2s; width:100%; }
-  .btn-primary:hover { background:#3D3322; transform:translateY(-1px); box-shadow:0 4px 16px rgba(44,36,23,.15); }
-  .btn-primary:disabled { background:#C9C2B8; cursor:not-allowed; transform:none; }
-  .btn-ghost { background:transparent; color:#2C2417; border:1.5px solid #D9D0C3; border-radius:10px; padding:.8rem 1.5rem; font-size:12px; font-family:'Nunito',sans-serif; font-weight:500; letter-spacing:.1em; text-transform:uppercase; cursor:pointer; transition:all .2s; width:100%; }
-  .btn-ghost:hover { border-color:#C4924A; color:#C4924A; background:#FDF6EC; }
-  .choice-card { background:#FFF; border:1.5px solid #EDE8DF; border-radius:13px; padding:1rem 1.15rem; cursor:pointer; text-align:left; transition:all .2s; width:100%; font-family:'Nunito',sans-serif; position:relative; overflow:hidden; }
-  .choice-card:hover { border-color:#C4924A; background:#FDFAF6; }
-  .choice-card.selected { border-color:#C4924A; background:linear-gradient(135deg,#FDF6EC,#FBF1E3); box-shadow:0 2px 12px rgba(196,146,74,.12); }
-  .choice-card.selected::after { content:'✓'; position:absolute; right:14px; top:50%; transform:translateY(-50%); color:#C4924A; font-size:15px; font-weight:700; }
-  .size-chip { background:#FFF; border:1.5px solid #EDE8DF; border-radius:9px; padding:.55rem .9rem; cursor:pointer; font-family:'Nunito',sans-serif; font-size:13px; font-weight:500; color:#2C2417; transition:all .2s; text-align:center; }
-  .size-chip:hover { border-color:#C4924A; background:#FDF6EC; }
-  .size-chip.selected { border-color:#C4924A; background:linear-gradient(135deg,#FDF6EC,#FBF1E3); color:#8B5E20; }
-  .text-input { border:1.5px solid #EDE8DF; border-radius:10px; padding:.75rem 1rem; font-size:14px; font-family:'Nunito',sans-serif; width:100%; background:#FFF; color:#2C2417; outline:none; transition:border-color .2s; }
-  .text-input:focus { border-color:#C4924A; box-shadow:0 0 0 3px rgba(196,146,74,.08); }
-  .text-input::placeholder { color:#C2B9AE; }
-  .back-btn { background:none; border:none; color:#A89880; font-size:12px; font-family:'Nunito',sans-serif; cursor:pointer; padding:0; margin-bottom:1.5rem; letter-spacing:.1em; text-transform:uppercase; display:flex; align-items:center; gap:6px; transition:color .2s; font-weight:500; }
-  .back-btn:hover { color:#2C2417; }
-  .id-pill { background:linear-gradient(135deg,#FDF6EC,#FBF1E3); border:1px solid #E8D9C0; border-radius:12px; padding:.9rem 1.1rem; margin-bottom:1.5rem; display:flex; align-items:center; gap:10px; }
-  .lbl { font-size:10px; color:#C4924A; letter-spacing:.2em; text-transform:uppercase; font-weight:700; margin-bottom:5px; display:block; }
-  .price-est { border-radius:12px; padding:.85rem 1rem; margin-bottom:1.25rem; display:flex; gap:10px; align-items:flex-start; }
-  .price-est.loading { background:#F8F6F2; border:1px solid #EDE8DF; }
-  .price-est.ready { background:linear-gradient(135deg,#F0F7F1,#E8F2EA); border:1px solid #B8D9BC; }
-  .price-est.warn { background:linear-gradient(135deg,#FFF8EE,#FFF1DC); border:1px solid #EDD49A; }
-  .est-pulse { width:8px; height:8px; border-radius:50%; background:#C4924A; animation:blink 1.2s ease-in-out infinite; flex-shrink:0; margin-top:4px; }
+  .search-input { border:1px solid #EDEAE4; border-radius:2px; padding:.75rem 1rem; font-size:14px; font-family:'Outfit',sans-serif; font-weight:300; flex:1; background:#fff; color:#1A1612; outline:none; transition:border-color .2s; }
+  .search-input:focus { border-color:#1A1612; }
+  .search-input::placeholder { color:#C8C0B4; }
+  .search-btn { background:#1A1612; color:#fff; border:none; border-radius:2px; padding:.75rem 1.1rem; font-size:12px; font-family:'Outfit',sans-serif; font-weight:400; letter-spacing:.1em; cursor:pointer; white-space:nowrap; transition:background .2s; }
+  .search-btn:hover { background:#3A3028; }
+  .search-btn:disabled { background:#C8C0B4; cursor:not-allowed; }
+
+  /* Buttons */
+  .btn-primary { background:#1A1612; color:#fff; border:none; border-radius:2px; padding:.85rem 1.5rem; font-size:11px; font-family:'Outfit',sans-serif; font-weight:400; letter-spacing:.18em; text-transform:uppercase; cursor:pointer; transition:all .2s; width:100%; }
+  .btn-primary:hover { background:#3A3028; }
+  .btn-primary:disabled { background:#C8C0B4; cursor:not-allowed; }
+  .btn-ghost { background:transparent; color:#1A1612; border:1px solid #EDEAE4; border-radius:2px; padding:.8rem 1.5rem; font-size:11px; font-family:'Outfit',sans-serif; font-weight:400; letter-spacing:.14em; text-transform:uppercase; cursor:pointer; transition:all .2s; width:100%; }
+  .btn-ghost:hover { border-color:#1A1612; }
+
+  /* Choice cards */
+  .choice-card { background:#fff; border:1px solid #EDEAE4; border-radius:2px; padding:1rem 1.15rem; cursor:pointer; text-align:left; transition:all .2s; width:100%; font-family:'Outfit',sans-serif; position:relative; overflow:hidden; }
+  .choice-card:hover { border-color:#1A1612; }
+  .choice-card.selected { border-color:#1A1612; background:#F5F0E8; }
+  .choice-card.selected::after { content:'✓'; position:absolute; right:14px; top:50%; transform:translateY(-50%); color:#1A1612; font-size:14px; font-weight:500; }
+
+  /* Size chips */
+  .size-chip { background:#fff; border:1px solid #EDEAE4; border-radius:2px; padding:.55rem .9rem; cursor:pointer; font-family:'Outfit',sans-serif; font-size:13px; font-weight:300; color:#1A1612; transition:all .2s; text-align:center; }
+  .size-chip:hover { border-color:#1A1612; }
+  .size-chip.selected { border-color:#1A1612; background:#F5F0E8; }
+
+  /* Text input */
+  .text-input { border:1px solid #EDEAE4; border-radius:2px; padding:.75rem 1rem; font-size:14px; font-family:'Outfit',sans-serif; font-weight:300; width:100%; background:#fff; color:#1A1612; outline:none; transition:border-color .2s; }
+  .text-input:focus { border-color:#1A1612; }
+  .text-input::placeholder { color:#C8C0B4; }
+
+  /* Back button */
+  .back-btn { background:none; border:none; color:#9A9080; font-size:11px; font-family:'Outfit',sans-serif; cursor:pointer; padding:0; margin-bottom:1.5rem; letter-spacing:.14em; text-transform:uppercase; display:flex; align-items:center; gap:6px; transition:color .2s; font-weight:300; }
+  .back-btn:hover { color:#1A1612; }
+
+  /* ID pill */
+  .id-pill { background:#F5F0E8; border:1px solid #EDEAE4; border-radius:2px; padding:.9rem 1.1rem; margin-bottom:1.5rem; display:flex; align-items:center; gap:10px; }
+
+  /* Label */
+  .lbl { font-size:10px; color:#9A9080; letter-spacing:.2em; text-transform:uppercase; font-weight:400; margin-bottom:5px; display:block; }
+
+  /* Price estimate */
+  .price-est { border-radius:2px; padding:.85rem 1rem; margin-bottom:1.25rem; display:flex; gap:10px; align-items:flex-start; }
+  .price-est.loading { background:#F5F0E8; border:1px solid #EDEAE4; }
+  .price-est.ready { background:#F0F5F0; border:1px solid #C8D8C8; }
+  .price-est.warn { background:#F8F4EC; border:1px solid #E0D4B8; }
+  .est-pulse { width:7px; height:7px; border-radius:50%; background:#1A1612; animation:blink 1.2s ease-in-out infinite; flex-shrink:0; margin-top:4px; }
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
-  .bwarn { border-radius:12px; padding:.85rem 1rem; margin-bottom:1rem; display:flex; gap:10px; }
-  .bwarn.warn { background:linear-gradient(135deg,#FFF8EE,#FFF1DC); border:1px solid #EDD49A; }
-  .bwarn.danger { background:linear-gradient(135deg,#FFF3F0,#FFE8E3); border:1px solid #F5BFB5; }
+
+  /* Budget warning */
+  .bwarn { border-radius:2px; padding:.85rem 1rem; margin-bottom:1rem; display:flex; gap:10px; }
+  .bwarn.warn { background:#F8F4EC; border:1px solid #E0D4B8; }
+  .bwarn.danger { background:#FDF0EE; border:1px solid #E8C8C0; }
+
+  /* Section title */
   .sec-title { display:flex; align-items:center; gap:8px; margin:1.25rem 0 .85rem; }
-  .sec-title span { font-size:10px; color:#2C2417; letter-spacing:.18em; text-transform:uppercase; font-weight:700; white-space:nowrap; }
-  .sec-title::after { content:''; flex:1; height:1px; background:#EDE8DF; }
-  .listing-card { background:#FFF; border:1px solid #EDE8DF; border-radius:16px; padding:1.25rem 1.4rem; margin-bottom:.85rem; transition:all .2s; position:relative; overflow:hidden; }
-  .listing-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:#C4924A; transform:scaleY(0); transform-origin:bottom; transition:transform .25s; }
-  .listing-card:hover { border-color:#D9C9AE; box-shadow:0 4px 18px rgba(196,146,74,.1); transform:translateY(-1px); }
+  .sec-title span { font-size:10px; color:#1A1612; letter-spacing:.2em; text-transform:uppercase; font-weight:400; white-space:nowrap; }
+  .sec-title::after { content:''; flex:1; height:1px; background:#EDEAE4; }
+
+  /* Listing card */
+  .listing-card { background:#fff; border:1px solid #EDEAE4; border-radius:2px; padding:1.25rem 1.4rem; margin-bottom:.75rem; transition:all .2s; position:relative; overflow:hidden; }
+  .listing-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:2px; background:#1A1612; transform:scaleY(0); transform-origin:bottom; transition:transform .25s; }
+  .listing-card:hover { border-color:#C8C0B4; box-shadow:0 2px 12px rgba(0,0,0,.06); }
   .listing-card:hover::before { transform:scaleY(1); }
-  .listing-num { font-family:'Playfair Display',serif; font-size:26px; font-weight:400; font-style:italic; color:#C4924A; opacity:.5; line-height:1; margin-right:12px; flex-shrink:0; }
-  .listing-title { font-size:14px; color:#2C2417; font-weight:500; line-height:1.4; margin-bottom:5px; }
-  .listing-price { font-size:18px; color:#C4924A; font-weight:600; font-family:'Playfair Display',serif; font-style:italic; white-space:nowrap; flex-shrink:0; }
-  .listing-btn { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; color:#FFF; letter-spacing:.06em; text-transform:uppercase; text-decoration:none; background:#2C2417; border-radius:8px; padding:7px 13px; margin-top:8px; transition:all .2s; }
-  .listing-btn:hover { background:#C4924A; }
-  .tag { display:inline-block; background:#F4EFE8; color:#8C7A63; font-size:10px; font-weight:600; padding:3px 9px; border-radius:5px; margin-right:5px; margin-top:3px; letter-spacing:.07em; text-transform:uppercase; }
-  .tag.g { background:#EEF4EF; color:#5A8060; }
-  .shop-card { background:#FFF; border:1px solid #EDE8DF; border-radius:14px; padding:1.1rem 1.25rem; margin-bottom:.7rem; position:relative; overflow:hidden; transition:all .2s; }
-  .shop-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:#7A9E7E; transform:scaleY(0); transform-origin:bottom; transition:transform .25s; }
-  .shop-card:hover { border-color:#B8CDB9; box-shadow:0 4px 20px rgba(122,158,126,.08); }
+  .listing-num { font-family:'Outfit',sans-serif; font-size:22px; font-weight:200; color:#C8C0B4; line-height:1; margin-right:12px; flex-shrink:0; }
+  .listing-title { font-size:13px; color:#1A1612; font-weight:400; line-height:1.4; margin-bottom:4px; }
+  .listing-price { font-size:17px; color:#1A1612; font-weight:500; white-space:nowrap; flex-shrink:0; }
+  .listing-btn { display:inline-flex; align-items:center; gap:5px; font-size:10px; font-weight:400; color:#fff; letter-spacing:.1em; text-transform:uppercase; text-decoration:none; background:#1A1612; border-radius:1px; padding:7px 12px; margin-top:8px; transition:background .2s; }
+  .listing-btn:hover { background:#3A3028; }
+
+  /* Tags */
+  .tag { display:inline-block; background:#F5F0E8; color:#9A9080; font-size:10px; font-weight:400; padding:3px 8px; border-radius:1px; margin-right:4px; margin-top:3px; letter-spacing:.08em; text-transform:uppercase; }
+  .tag.g { background:#EEF4EE; color:#5A7A5A; }
+
+  /* Shop card */
+  .shop-card { background:#fff; border:1px solid #EDEAE4; border-radius:2px; padding:1.1rem 1.25rem; margin-bottom:.6rem; position:relative; overflow:hidden; transition:all .2s; }
+  .shop-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:2px; background:#5A7A5A; transform:scaleY(0); transform-origin:bottom; transition:transform .25s; }
+  .shop-card:hover { border-color:#C8D8C8; }
   .shop-card:hover::before { transform:scaleY(1); }
-  .shop-num { font-family:'Playfair Display',serif; font-size:26px; font-weight:400; font-style:italic; color:#7A9E7E; opacity:.6; line-height:1; margin-right:12px; flex-shrink:0; }
-  .shop-btn { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:#7A9E7E; text-transform:uppercase; letter-spacing:.07em; text-decoration:none; background:#EEF4EF; border:1px solid #C8DBC9; border-radius:7px; padding:5px 10px; margin-top:6px; }
-  .shop-btn:hover { background:#E0EDDF; }
+  .shop-num { font-family:'Outfit',sans-serif; font-size:22px; font-weight:200; color:#C8D8C8; line-height:1; margin-right:12px; flex-shrink:0; }
+  .shop-btn { display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:400; color:#5A7A5A; text-transform:uppercase; letter-spacing:.08em; text-decoration:none; background:#EEF4EE; border:1px solid #C8D8C8; border-radius:1px; padding:5px 10px; margin-top:6px; }
+  .shop-btn:hover { background:#E0EDE0; }
+
+  /* Spinner */
   .spinner-wrap { text-align:center; padding:3rem 0 2rem; }
-  .spinner { width:44px; height:44px; border:2px solid #EDE8DF; border-top-color:#C4924A; border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 1.5rem; }
+  .spinner { width:32px; height:32px; border:1.5px solid #EDEAE4; border-top-color:#1A1612; border-radius:50%; animation:spin 1s linear infinite; margin:0 auto 1.5rem; }
   @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* Animations */
   .slide-in { animation:slideUp .3s cubic-bezier(.22,1,.36,1); }
-  @keyframes slideUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
-  .err { background:#FEF2F2; border:1px solid #FECDCD; border-radius:10px; padding:.75rem 1rem; font-size:12px; color:#B94A4A; margin-bottom:1rem; line-height:1.5; }
-  .rescan { background:none; border:none; padding:0; color:#A89880; font-size:11px; font-family:'Nunito',sans-serif; cursor:pointer; text-decoration:underline; text-decoration-color:#D9D0C3; transition:color .2s; }
-  .rescan:hover { color:#C4924A; }
-  .img-thumb { width:46px; height:46px; object-fit:cover; border-radius:10px; border:1.5px solid #EDE8DF; flex-shrink:0; }
+  @keyframes slideUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+  /* Error */
+  .err { background:#FDF0EE; border:1px solid #E8C8C0; border-radius:2px; padding:.75rem 1rem; font-size:12px; color:#8A3A30; margin-bottom:1rem; line-height:1.5; }
+
+  /* Rescan */
+  .rescan { background:none; border:none; padding:0; color:#9A9080; font-size:11px; font-family:'Outfit',sans-serif; cursor:pointer; text-decoration:underline; text-decoration-color:#EDEAE4; transition:color .2s; font-weight:300; }
+  .rescan:hover { color:#1A1612; }
+
+  /* Image thumb */
+  .img-thumb { width:44px; height:44px; object-fit:cover; border-radius:2px; border:1px solid #EDEAE4; flex-shrink:0; }
+
+  /* Scan wrap */
   .scan-wrap { position:relative; display:inline-block; margin-bottom:1.75rem; }
-  .scan-pulse { position:absolute; inset:-10px; border:1.5px solid #C4924A; border-radius:18px; opacity:0; animation:pr 1.8s ease-out infinite; }
-  @keyframes pr { 0%{transform:scale(.92);opacity:.6} 100%{transform:scale(1.08);opacity:0} }
+  .scan-pulse { position:absolute; inset:-10px; border:1px solid #1A1612; border-radius:4px; opacity:0; animation:pr 1.8s ease-out infinite; }
+  @keyframes pr { 0%{transform:scale(.92);opacity:.4} 100%{transform:scale(1.08);opacity:0} }
+
+  /* Divider */
   .divgem { text-align:center; margin:1.25rem 0 .85rem; position:relative; }
-  .divgem::before { content:''; position:absolute; top:50%; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,#EDE8DF,transparent); }
-  .gem { display:inline-block; background:#FDFAF6; padding:0 10px; position:relative; font-size:16px; }
-  .tip-box { background:linear-gradient(135deg,#F5F9F5,#EEF4EF); border:1px solid #C8DBC9; border-radius:12px; padding:.85rem 1rem; margin-bottom:1rem; display:flex; gap:10px; align-items:flex-start; }
-  .cdot { width:10px; height:10px; border-radius:50%; flex-shrink:0; margin-top:3px; }
+  .divgem::before { content:''; position:absolute; top:50%; left:0; right:0; height:1px; background:#EDEAE4; }
+  .gem { display:inline-block; background:#fff; padding:0 10px; position:relative; font-size:16px; }
+
+  /* Tip box */
+  .tip-box { background:#EEF4EE; border:1px solid #C8D8C8; border-radius:2px; padding:.85rem 1rem; margin-bottom:1rem; display:flex; gap:10px; align-items:flex-start; }
+  .cdot { width:9px; height:9px; border-radius:50%; flex-shrink:0; margin-top:3px; }
+
+  /* Search steps */
   .ssteps { display:flex; flex-direction:column; gap:10px; margin-top:1.5rem; }
   .sstep { display:flex; align-items:center; gap:10px; }
-  .sdot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
-  .sdot.active { background:#C4924A; animation:blink 1.2s ease-in-out infinite; }
-  .sdot.done { background:#C4924A; opacity:.5; } .sdot.pending { background:#EDE8DF; }
-  .loc-badge { display:flex; align-items:center; gap:8px; background:#F0F7F1; border:1px solid #B8D9BC; border-radius:10px; padding:.65rem 1rem; margin-bottom:1.25rem; }
-  .locdot { width:7px; height:7px; border-radius:50%; background:#7A9E7E; animation:blink 1.4s ease-in-out infinite; flex-shrink:0; }
-  .mtabs { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:1.25rem; }
-  .mtab { background:#FFF; border:1.5px solid #EDE8DF; border-radius:11px; padding:.75rem 1rem; cursor:pointer; font-family:'Nunito',sans-serif; font-size:13px; font-weight:500; color:#A89880; transition:all .2s; text-align:center; display:flex; align-items:center; justify-content:center; gap:7px; }
-  .mtab:hover { border-color:#C4924A; color:#2C2417; }
-  .mtab.active { border-color:#C4924A; background:linear-gradient(135deg,#FDF6EC,#FBF1E3); color:#2C2417; font-weight:600; }
-  .no-results { background:#F8F6F2; border:1px solid #EDE8DF; border-radius:10px; padding:.85rem 1rem; font-size:12px; color:#A89880; margin-bottom:.7rem; line-height:1.5; }
+  .sdot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+  .sdot.active { background:#1A1612; animation:blink 1.2s ease-in-out infinite; }
+  .sdot.done { background:#1A1612; opacity:.3; }
+  .sdot.pending { background:#EDEAE4; }
+
+  /* Location badge */
+  .loc-badge { display:flex; align-items:center; gap:8px; background:#F0F5F0; border:1px solid #C8D8C8; border-radius:2px; padding:.65rem 1rem; margin-bottom:1.25rem; }
+  .locdot { width:6px; height:6px; border-radius:50%; background:#5A7A5A; animation:blink 1.4s ease-in-out infinite; flex-shrink:0; }
+
+  /* Mode tabs */
+  .mtabs { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:1.25rem; }
+  .mtab { background:#fff; border:1px solid #EDEAE4; border-radius:2px; padding:.75rem 1rem; cursor:pointer; font-family:'Outfit',sans-serif; font-size:12px; font-weight:300; color:#9A9080; transition:all .2s; text-align:center; display:flex; align-items:center; justify-content:center; gap:7px; letter-spacing:.04em; }
+  .mtab:hover { border-color:#1A1612; color:#1A1612; }
+  .mtab.active { border-color:#1A1612; background:#F5F0E8; color:#1A1612; font-weight:400; }
+
+  /* No results */
+  .no-results { background:#F5F0E8; border:1px solid #EDEAE4; border-radius:2px; padding:.85rem 1rem; font-size:12px; color:#9A9080; margin-bottom:.6rem; line-height:1.5; font-weight:300; }
 `;
 
 export default function App() {
@@ -312,9 +367,8 @@ export default function App() {
       });
       const d = await r.json();
       if (d?.error?.type === "rate_limit_error") {
-        setError("⏳ Even wachten — te veel zoekopdrachten tegelijk. Probeer over 30 seconden opnieuw.");
-        setStep("upload");
-        return;
+        setError("Too many requests — please wait 30 seconds and try again.");
+        setStep("upload"); return;
       }
       const raw = (d.content?.[0]?.text || "").trim();
       const parsed = parseJSON(raw);
@@ -354,7 +408,7 @@ export default function App() {
       });
       const d = await r.json();
       if (d?.error?.type === "rate_limit_error") {
-        setError("⏳ Too many requests. Wait 30 seconds and try again.");
+        setError("Too many requests. Wait 30 seconds and try again.");
         setStep("upload"); return;
       }
       const raw = (d.content?.[0]?.text || "").trim();
@@ -402,14 +456,8 @@ export default function App() {
   const handleSearch = async () => {
     setStep("searching"); setSearchPhase(1); setError("");
     setListings([]); setShopResults([]);
-
-    // Online listings: use radius-based location
     const locText = !userLocation ? "worldwide" : radius==="country" ? userLocation.country : radius==="continent" ? userLocation.continent : "worldwide";
-
-    const shopCity = userLocation?.city
-      ? userLocation.city + ", " + userLocation.country
-      : userLocation?.country || "your area";
-
+    const shopCity = userLocation?.city ? userLocation.city + ", " + userLocation.country : userLocation?.country || "your area";
     const condText = condition==="new" ? "brand new" : condition==="used" ? "second-hand/pre-owned" : "new or used";
     const qualText = condition==="new" ? "" : (QUALITY_OPTS.find(q=>q.val===quality)?.label || "");
     const sizeText = effSize ? "size "+effSize : "";
@@ -417,10 +465,7 @@ export default function App() {
     const platforms = getSearchPlatforms(condition, userLocation?.countryCode, radius, userLocation?.continentCode, itemCategory);
     const shopType = condition==="new" ? "physical retail stores or boutiques" : "physical vintage, thrift, consignment or streetwear stores";
     const filters = [condText, qualText, sizeText, priceText].filter(Boolean).join(", ");
-
-    const newItemInstruction = condition === "new"
-      ? 'Priority: search official brand websites and established retail webshops first. These are new items sold by retailers — not resellers or auction sites.\n'
-      : '';
+    const newItemInstruction = condition === "new" ? 'Priority: search official brand websites and established retail webshops first. These are new items sold by retailers — not resellers or auction sites.\n' : '';
 
     const listingPrompt =
       'Search the web for real listings of: "' + activeQ + '"\n' +
@@ -428,20 +473,13 @@ export default function App() {
       newItemInstruction +
       'Filters: ' + filters + '\n' +
       'LOCATION: Listings must be available in or ship to ' + locText + '. Only return results from sellers or platforms operating in ' + locText + '.\n\n' +
-      'CRITICAL RULES:\n' +
-      '1. ONLY return real, active product listing pages — never return homepage URLs, category pages, or search result pages\n' +
-      '2. NEVER return a listing with title like "Unable to find", "N/A", or any explanation — if you cannot find 3 results, relax size filter first, then price filter, then location\n' +
-      '3. Copy the exact URL of each individual listing from your search results\n' +
-      '4. Each listing must have a real price (e.g. "€89") — not "N/A"\n\n' +
-      'Reply ONLY with this JSON (no extra text):\n' +
-      '{"listings":[{"title":"...","price":"'+currency+'XX","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
+      'CRITICAL RULES:\n1. ONLY return real, active product listing pages\n2. NEVER return a listing with title like "Unable to find" or price "N/A"\n3. Each listing must have a real price\n\n' +
+      'Reply ONLY with this JSON:\n{"listings":[{"title":"...","price":"'+currency+'XX","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
 
-    // *** FIX 2: Shops use web search (max 2 uses) so it finds real local stores ***
     const shopsPrompt =
-      'Name 3 real physical ' + shopType + ' in ' + shopCity + ' that would carry: "' + identifiedItem + '". Use your knowledge of physical stores. Include city in address. Find nearest if none in ' + shopCity + '.\n' +
+      'Name 3 real physical ' + shopType + ' in ' + shopCity + ' that would carry: "' + identifiedItem + '". Include city in address.\n' +
       'Reply ONLY JSON: {"shops":[{"name":"...","description":"1 sentence","address":"city, country","url":"https://...","tip":"why they might have it"},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."}]}';
 
-    // Run listings first, then shops — prevents rate limiting from parallel calls
     let foundListings = [];
     let foundShops = [];
 
@@ -454,20 +492,16 @@ export default function App() {
           messages:[{ role:"user", content: listingPrompt }]
         }),
       }).then(r=>r.json());
-
       if (listingData?.error?.type === "rate_limit_error") {
-        setError("⏳ Te veel zoekopdrachten tegelijk. Wacht even 30 seconden en probeer opnieuw.");
-        setStep("location");
-        return;
+        setError("Too many requests — please wait 30 seconds and try again.");
+        setStep("location"); return;
       }
-      const listingTxt = (listingData.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
-      const listingParsed = parseJSON(listingTxt);
-      if (listingParsed?.listings?.length) foundListings = listingParsed.listings.slice(0,3);
+      const txt = (listingData.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+      const p = parseJSON(txt);
+      if (p?.listings?.length) foundListings = p.listings.slice(0,3);
     } catch {}
 
     setSearchPhase(3);
-
-    // Show listings immediately, load shops in background
     setListings(sortByPrice(foundListings));
     if (foundListings.length > 0) saveSearch(identifiedItem);
     setStep("results");
@@ -480,11 +514,10 @@ export default function App() {
           messages:[{ role:"user", content: shopsPrompt }]
         }),
       }).then(r=>r.json());
-      const shopTxt = (shopData.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
-      const shopParsed = parseJSON(shopTxt);
-      if (shopParsed?.shops?.length) foundShops = shopParsed.shops.slice(0,3);
+      const txt = (shopData.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+      const p = parseJSON(txt);
+      if (p?.shops?.length) foundShops = p.shops.slice(0,3);
     } catch {}
-
     setShopResults(foundShops);
   };
 
@@ -497,26 +530,14 @@ export default function App() {
     const priceText = (priceMin||priceMax) ? "price "+currency+(priceMin||"0")+"-"+currency+(priceMax||"any") : "";
     const platforms = getSearchPlatforms(condition, userLocation?.countryCode, radius, userLocation?.continentCode, itemCategory);
     const filters = [condText, qualText, sizeText, priceText].filter(Boolean).join(", ");
-    const newItemInstruction = condition === "new"
-      ? 'Priority: search official brand websites and established retail webshops first (e.g. Zalando, ASOS, brand sites). These are new items sold by retailers, not resellers.\n'
-      : '';
+    const newItemInstruction = condition === "new" ? 'Priority: search official brand websites and established retail webshops first.\n' : '';
     const alreadyShown = listings.map(l => l.url).filter(Boolean).join(", ");
-
     const prompt =
-      'Search the web for real listings of: "' + activeQ + '"\n' +
-      'Search on these platforms: ' + platforms + '\n' +
-      newItemInstruction +
-      'Filters: ' + filters + '\n' +
-      'LOCATION: Listings must be available in or ship to ' + locText + '. Only return results from sellers or platforms operating in ' + locText + '.\n\n' +
-      'Already shown to user — do NOT repeat these URLs: ' + alreadyShown + '\n\n' +
-      'CRITICAL RULES:\n' +
-      '1. Find 3 DIFFERENT listings not yet shown — different sellers or platforms if possible\n' +
-      '2. ONLY return real, active listing pages — never homepages, category pages, or search pages\n' +
-      '3. NEVER return a listing with title like "Unable to find" or price "N/A" — relax size/price filters if needed\n' +
-      '4. Each listing must have a real price (e.g. "€89")\n\n' +
-      'Reply ONLY with this JSON (no extra text):\n' +
-      '{"listings":[{"title":"...","price":"'+currency+'XX","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
-
+      'Search the web for real listings of: "' + activeQ + '"\nSearch on: ' + platforms + '\n' +
+      newItemInstruction + 'Filters: ' + filters + '\nLOCATION: ' + locText + '\n' +
+      'Do NOT repeat: ' + alreadyShown + '\n' +
+      'RULES: Only real active listing pages, real prices, 3 different listings.\n' +
+      'Reply ONLY JSON: {"listings":[{"title":"...","price":"'+currency+'XX","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
     try {
       const r = await fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
@@ -553,7 +574,7 @@ export default function App() {
     return null;
   };
   const budgetWarn = bwLevel();
-  const rC = { common:"#5A8060", uncommon:"#A06B2A", rare:"#8B3A3A", very_rare:"#6B2F8B" };
+  const rC = { common:"#5A7A5A", uncommon:"#8A7040", rare:"#8A3A30", very_rare:"#6A4A8A" };
   const rL = { common:"Widely available", uncommon:"Takes some searching", rare:"Hard to find", very_rare:"Very rare — be patient" };
 
   const Back = ({ to }) => (
@@ -569,16 +590,16 @@ export default function App() {
     return (
       <div className={"price-est "+cls}>
         {priceEstLoading
-          ? <><div className="est-pulse"/><div><div style={{fontSize:11,fontWeight:700,color:"#A89880",letterSpacing:".12em",textTransform:"uppercase",marginBottom:2}}>Checking market prices…</div><div style={{fontSize:12,color:"#A89880"}}>Estimating typical resale value</div></div></>
+          ? <><div className="est-pulse"/><div><div style={{fontSize:10,fontWeight:400,color:"#9A9080",letterSpacing:".14em",textTransform:"uppercase",marginBottom:2}}>Checking market prices…</div><div style={{fontSize:12,color:"#9A9080",fontWeight:300}}>Estimating typical resale value</div></div></>
           : priceEst?.min>0
-            ? <><div style={{fontSize:20,flexShrink:0}}>{priceEst.rarity==="very_rare"?"💎":priceEst.rarity==="rare"?"🔍":priceEst.rarity==="uncommon"?"🧭":"✅"}</div>
+            ? <><div style={{fontSize:18,flexShrink:0}}>{priceEst.rarity==="very_rare"?"💎":priceEst.rarity==="rare"?"🔍":priceEst.rarity==="uncommon"?"🧭":"✓"}</div>
                <div style={{flex:1}}>
                  <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:3}}>
-                   <span style={{fontSize:11,fontWeight:700,color:"#A89880",letterSpacing:".12em",textTransform:"uppercase"}}>Typical resale price</span>
-                   <span style={{fontSize:15,fontWeight:700,color:"#2C2417",fontFamily:"'Playfair Display',serif",fontStyle:"italic"}}>{currency}{priceEst.min}–{currency}{priceEst.max}</span>
+                   <span style={{fontSize:10,fontWeight:400,color:"#9A9080",letterSpacing:".14em",textTransform:"uppercase"}}>Typical resale price</span>
+                   <span style={{fontSize:15,fontWeight:500,color:"#1A1612"}}>{currency}{priceEst.min}–{currency}{priceEst.max}</span>
                  </div>
-                 {priceEst.rarity&&<div style={{fontSize:11,color:rC[priceEst.rarity],fontWeight:600,marginBottom:3}}>{rL[priceEst.rarity]}</div>}
-                 {priceEst.tip&&<div style={{fontSize:12,color:"#7A7268",fontStyle:"italic",lineHeight:1.4}}>{priceEst.tip}</div>}
+                 {priceEst.rarity&&<div style={{fontSize:11,color:rC[priceEst.rarity],fontWeight:400,marginBottom:3}}>{rL[priceEst.rarity]}</div>}
+                 {priceEst.tip&&<div style={{fontSize:12,color:"#7A7268",fontWeight:300,lineHeight:1.4}}>{priceEst.tip}</div>}
                </div></>
             : null}
       </div>
@@ -593,35 +614,35 @@ export default function App() {
   };
 
   return (
-    <div style={{background:"#FDFAF6",borderRadius:20}}>
+    <div style={{background:"#fff"}}>
       <style>{S}</style>
       <div className="app slide-in">
         <div className="app-header">
-          <h1 className="app-title">Scan &amp; Find</h1>
-          <p className="app-sub">Online deals · Hidden gem shops</p>
+          <h1 className="app-title">Gemly</h1>
+          <p className="app-sub">Scan & Find</p>
         </div>
         {currentIdx>=0&&<div className="progress-row">{STEP_ORDER.map((s,i)=><div key={s} className={"pdot "+(i<currentIdx?"done":i===currentIdx?"active":"")}/>)}</div>}
         {error&&<div className="err">{error}</div>}
 
         {step==="upload"&&(
           <div className="slide-in">
-            {locLoading&&<div className="loc-badge"><div className="locdot"/><span style={{fontSize:12,color:"#4A6E4F"}}>Detecting your location…</span></div>}
+            {locLoading&&<div className="loc-badge"><div className="locdot"/><span style={{fontSize:12,color:"#5A7A5A",fontWeight:300}}>Detecting your location…</span></div>}
             {userLocation&&!locLoading&&(
               <div className="loc-badge">
                 <span style={{fontSize:18}}>{getFlag(userLocation.countryCode)}</span>
                 <div>
-                  <div style={{fontSize:10,fontWeight:700,color:"#C4924A",letterSpacing:".1em",textTransform:"uppercase"}}>Shopping from</div>
-                  <div style={{fontSize:13,color:"#2C2417",fontWeight:500}}>{userLocation.city?userLocation.city+", ":""}{userLocation.country}</div>
+                  <div style={{fontSize:10,fontWeight:400,color:"#5A7A5A",letterSpacing:".12em",textTransform:"uppercase"}}>Shopping from</div>
+                  <div style={{fontSize:13,color:"#1A1612",fontWeight:400}}>{userLocation.city?userLocation.city+", ":""}{userLocation.country}</div>
                 </div>
               </div>
             )}
             <div className="mtabs">
               <button className={"mtab "+(inputMode==="photo"?"active":"")} onClick={()=>setInputMode("photo")}>
-                <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                 Scan a photo
               </button>
               <button className={"mtab "+(inputMode==="text"?"active":"")} onClick={()=>setInputMode("text")}>
-                <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 Search by name
               </button>
             </div>
@@ -633,12 +654,12 @@ export default function App() {
                   onDragLeave={()=>setDragOver(false)}
                   onDrop={e=>{e.preventDefault();setDragOver(false);handleFile(e.dataTransfer.files[0]);}}>
                   <div className="drop-icon">
-                    <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#C4924A" strokeWidth={1.4}><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#9A9080" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                   </div>
-                  <p style={{fontSize:15,fontWeight:500,margin:"0 0 5px",color:"#2C2417"}}>Drop your photo here</p>
-                  <p style={{fontSize:12,color:"#A89880",margin:0}}>or tap to browse your gallery</p>
+                  <p style={{fontSize:14,fontWeight:400,margin:"0 0 4px",color:"#1A1612"}}>Drop your photo here</p>
+                  <p style={{fontSize:12,color:"#9A9080",margin:0,fontWeight:300}}>or tap to browse your gallery</p>
                 </div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginTop:12}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:10}}>
                   <button className="btn-ghost" onClick={()=>fileRef.current.click()}>Upload photo</button>
                   <button className="btn-ghost" onClick={()=>camRef.current.click()}>📷 Take photo</button>
                 </div>
@@ -647,7 +668,7 @@ export default function App() {
               </>
             ):(
               <>
-                <p style={{fontSize:13,color:"#A89880",margin:"0 0 1rem",lineHeight:1.5}}>Type brand, model, colour — anything.</p>
+                <p style={{fontSize:13,color:"#9A9080",margin:"0 0 1rem",lineHeight:1.5,fontWeight:300}}>Type brand, model, colour — anything.</p>
                 <div className="search-row">
                   <input className="search-input" type="text" placeholder='e.g. "Palace tri-ferg tee SS23" or "Rolex Datejust 41"'
                     value={textQuery} onChange={e=>setTextQuery(e.target.value)}
@@ -664,32 +685,32 @@ export default function App() {
             {imageData?(
               <div className="scan-wrap">
                 <div className="scan-pulse"/><div className="scan-pulse" style={{animationDelay:"0.6s"}}/>
-                <img src={imageData} alt="" style={{width:110,height:110,objectFit:"cover",borderRadius:14,border:"1.5px solid #EDE8DF",display:"block",position:"relative",zIndex:1}}/>
+                <img src={imageData} alt="" style={{width:100,height:100,objectFit:"cover",borderRadius:4,border:"1px solid #EDEAE4",display:"block",position:"relative",zIndex:1}}/>
               </div>
-            ):<div style={{width:70,height:70,background:"linear-gradient(135deg,#FDF6EC,#FBF1E3)",borderRadius:16,margin:"0 auto 1.5rem",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28}}>🔍</div>}
-            <p style={{color:"#2C2417",fontSize:13,letterSpacing:".1em",textTransform:"uppercase",fontWeight:600,margin:"0 0 5px"}}>Identifying your item</p>
-            <p style={{color:"#A89880",fontSize:12,margin:0}}>{imageData ? "AI is reading the image…" : "AI is analysing your search…"}</p>
+            ):<div style={{width:64,height:64,background:"#F5F0E8",borderRadius:2,margin:"0 auto 1.5rem",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26}}>🔍</div>}
+            <p style={{color:"#1A1612",fontSize:12,letterSpacing:".14em",textTransform:"uppercase",fontWeight:400,margin:"0 0 5px"}}>Identifying your item</p>
+            <p style={{color:"#9A9080",fontSize:12,margin:0,fontWeight:300}}>{imageData ? "AI is reading the image…" : "AI is analysing your search…"}</p>
           </div>
         )}
 
         {step==="match_type"&&(
           <div className="slide-in">
             <div className="id-pill">
-              {imageData?<img src={imageData} alt="" style={{width:52,height:52,objectFit:"cover",borderRadius:8,border:"1px solid #E8D9C0",flexShrink:0}}/>
-                :<div style={{width:40,height:40,background:"#F2EBE0",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>{itemCategory==="watches"?"⌚":itemCategory==="jewelry"?"💍":"🔍"}</div>}
+              {imageData?<img src={imageData} alt="" style={{width:48,height:48,objectFit:"cover",borderRadius:2,border:"1px solid #EDEAE4",flexShrink:0}}/>
+                :<div style={{width:38,height:38,background:"#F5F0E8",borderRadius:2,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{itemCategory==="watches"?"⌚":itemCategory==="jewelry"?"💍":"🔍"}</div>}
               <div style={{flex:1,minWidth:0}}>
                 <span className="lbl" style={{margin:0}}>Identified as</span>
-                <div style={{color:"#2C2417",fontSize:15,fontFamily:"'Playfair Display',serif",fontStyle:"italic",lineHeight:1.3,marginTop:2}}>{identifiedItem||"Scanning…"}</div>
+                <div style={{color:"#1A1612",fontSize:14,fontWeight:400,lineHeight:1.3,marginTop:2}}>{identifiedItem||"Scanning…"}</div>
               </div>
               <button className="rescan" onClick={reset} style={{flexShrink:0}}>Start over</button>
             </div>
             <PriceWidget/>
             <span className="lbl">What are you looking for?</span>
-            <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:"1.25rem"}}>
+            <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:"1.25rem"}}>
               {[{val:"exact",label:"Exact match",desc:"This specific item"},{val:"similar",label:"Similar style",desc:"Same category or aesthetic"}].map(({val,label,desc})=>(
                 <button key={val} className={"choice-card "+(matchType===val?"selected":"")} onClick={()=>setMatchType(val)}>
-                  <span style={{fontSize:14,color:"#2C2417",display:"block",fontWeight:500}}>{label}</span>
-                  <span style={{fontSize:12,color:"#A89880",display:"block",marginTop:2}}>{desc}</span>
+                  <span style={{fontSize:13,color:"#1A1612",display:"block",fontWeight:400}}>{label}</span>
+                  <span style={{fontSize:12,color:"#9A9080",display:"block",marginTop:2,fontWeight:300}}>{desc}</span>
                 </button>
               ))}
             </div>
@@ -701,7 +722,7 @@ export default function App() {
           <div className="slide-in">
             <Back to="match_type"/>
             <span className="lbl">Your size</span>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7,marginBottom:"1rem"}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:"1rem"}}>
               {Object.entries(SIZE_CATS).map(([key,cat])=>(
                 <button key={key} className={"size-chip "+(sizeCat===key?"selected":"")} onClick={()=>{setSizeCat(sizeCat===key?null:key);setSelectedSize(null);}}>{cat.label}</button>
               ))}
@@ -709,15 +730,15 @@ export default function App() {
             {sizeCat&&SIZE_CATS[sizeCat]&&(
               <div style={{marginBottom:"1rem"}}>
                 <span className="lbl" style={{marginBottom:8}}>Pick your size</span>
-                <div style={{display:"flex",flexWrap:"wrap",gap:7}}>
+                <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                   {SIZE_CATS[sizeCat].sizes.map(s=>(
-                    <button key={s} className={"size-chip "+(selectedSize===s?"selected":"")} style={{minWidth:48}} onClick={()=>setSelectedSize(selectedSize===s?null:s)}>{s}</button>
+                    <button key={s} className={"size-chip "+(selectedSize===s?"selected":"")} style={{minWidth:46}} onClick={()=>setSelectedSize(selectedSize===s?null:s)}>{s}</button>
                   ))}
                 </div>
               </div>
             )}
             <div style={{marginBottom:"1.25rem"}}>
-              <label style={{fontSize:10,color:"#C4924A",display:"block",marginBottom:6,letterSpacing:".15em",textTransform:"uppercase",fontWeight:700}}>Or type a custom size</label>
+              <label style={{fontSize:10,color:"#9A9080",display:"block",marginBottom:6,letterSpacing:".16em",textTransform:"uppercase",fontWeight:400}}>Or type a custom size</label>
               <input className="text-input" type="text" placeholder='e.g. "IT 42", "UK 12", "W32 L32"' value={customSize} onChange={e=>{setCustomSize(e.target.value);if(e.target.value)setSelectedSize(null);}}/>
             </div>
             <button className="btn-primary" onClick={()=>setStep("condition")}>{effSize?"Continue with size "+effSize:"Continue without size"}</button>
@@ -728,11 +749,11 @@ export default function App() {
           <div className="slide-in">
             <Back to={sizeRelevant?"size":"match_type"}/>
             <span className="lbl">First-hand or second-hand?</span>
-            <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:"1.25rem"}}>
+            <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:"1.25rem"}}>
               {[{val:"new",label:"First-hand only",desc:"Brand new from retail"},{val:"used",label:"Second-hand only",desc:"Pre-owned, vintage, refurbished"},{val:"both",label:"Show me both",desc:"All options — best price wins"}].map(({val,label,desc})=>(
                 <button key={val} className={"choice-card "+(condition===val?"selected":"")} onClick={()=>setCondition(val)}>
-                  <span style={{fontSize:14,color:"#2C2417",display:"block",fontWeight:500}}>{label}</span>
-                  <span style={{fontSize:12,color:"#A89880",display:"block",marginTop:2}}>{desc}</span>
+                  <span style={{fontSize:13,color:"#1A1612",display:"block",fontWeight:400}}>{label}</span>
+                  <span style={{fontSize:12,color:"#9A9080",display:"block",marginTop:2,fontWeight:300}}>{desc}</span>
                 </button>
               ))}
             </div>
@@ -744,14 +765,14 @@ export default function App() {
           <div className="slide-in">
             <Back to="condition"/>
             <span className="lbl">Desired condition</span>
-            <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:"1.25rem"}}>
+            <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:"1.25rem"}}>
               {QUALITY_OPTS.map(({val,label,desc,dot})=>(
                 <button key={val} className={"choice-card "+(quality===val?"selected":"")} onClick={()=>setQuality(val)}>
                   <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
                     <div className="cdot" style={{background:dot,marginTop:4}}/>
                     <div>
-                      <span style={{fontSize:14,color:"#2C2417",display:"block",fontWeight:500}}>{label}</span>
-                      <span style={{fontSize:12,color:"#A89880",display:"block",marginTop:2}}>{desc}</span>
+                      <span style={{fontSize:13,color:"#1A1612",display:"block",fontWeight:400}}>{label}</span>
+                      <span style={{fontSize:12,color:"#9A9080",display:"block",marginTop:2,fontWeight:300}}>{desc}</span>
                     </div>
                   </div>
                 </button>
@@ -766,23 +787,23 @@ export default function App() {
             <Back to={condition==="new"?"condition":"quality"}/>
             <span className="lbl">Your budget</span>
             <PriceWidget/>
-            <p style={{color:"#A89880",fontSize:12,margin:"0 0 1.25rem"}}>Leave blank to skip</p>
+            <p style={{color:"#9A9080",fontSize:12,margin:"0 0 1.25rem",fontWeight:300}}>Leave blank to skip</p>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:"1rem"}}>
               <div>
-                <label style={{fontSize:10,color:"#C4924A",display:"block",marginBottom:6,letterSpacing:".15em",textTransform:"uppercase",fontWeight:700}}>Min ({currency})</label>
+                <label style={{fontSize:10,color:"#9A9080",display:"block",marginBottom:6,letterSpacing:".16em",textTransform:"uppercase",fontWeight:400}}>Min ({currency})</label>
                 <input className="text-input" type="number" placeholder="0" min="0" value={priceMin} onChange={e=>setPriceMin(e.target.value)}/>
               </div>
               <div>
-                <label style={{fontSize:10,color:"#C4924A",display:"block",marginBottom:6,letterSpacing:".15em",textTransform:"uppercase",fontWeight:700}}>Max ({currency})</label>
+                <label style={{fontSize:10,color:"#9A9080",display:"block",marginBottom:6,letterSpacing:".16em",textTransform:"uppercase",fontWeight:400}}>Max ({currency})</label>
                 <input className="text-input" type="number" placeholder="No limit" min="0" value={priceMax} onChange={e=>setPriceMax(e.target.value)}/>
               </div>
             </div>
             {budgetWarn&&priceEst&&(
               <div className={"bwarn "+budgetWarn}>
-                <span style={{fontSize:18,flexShrink:0}}>{budgetWarn==="danger"?"⚠️":"💡"}</span>
+                <span style={{fontSize:16,flexShrink:0}}>{budgetWarn==="danger"?"⚠️":"💡"}</span>
                 <div>
-                  <div style={{fontSize:12,fontWeight:700,color:budgetWarn==="danger"?"#A03020":"#8B6020",marginBottom:3}}>{budgetWarn==="danger"?"Budget may be too low":"Heads up on pricing"}</div>
-                  <div style={{fontSize:12,color:budgetWarn==="danger"?"#A03020":"#8B6020",lineHeight:1.5}}>Typically sells for <strong>{currency}{priceEst.min}–{currency}{priceEst.max}</strong>.{budgetWarn==="danger"?" Very hard to find at this price.":" You may need some patience."}</div>
+                  <div style={{fontSize:12,fontWeight:500,color:budgetWarn==="danger"?"#8A3A30":"#7A6030",marginBottom:3}}>{budgetWarn==="danger"?"Budget may be too low":"Heads up on pricing"}</div>
+                  <div style={{fontSize:12,color:budgetWarn==="danger"?"#8A3A30":"#7A6030",lineHeight:1.5,fontWeight:300}}>Typically sells for <strong>{currency}{priceEst.min}–{currency}{priceEst.max}</strong>.{budgetWarn==="danger"?" Very hard to find at this price.":" You may need some patience."}</div>
                 </div>
               </div>
             )}
@@ -794,8 +815,8 @@ export default function App() {
           <div className="slide-in">
             <Back to="price"/>
             <span className="lbl">How far will you shop?</span>
-            {userLocation&&<p style={{color:"#A89880",fontSize:12,margin:"0 0 1rem"}}>You're in <strong style={{color:"#2C2417"}}>{userLocation.country}</strong>.</p>}
-            <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:"1.25rem"}}>
+            {userLocation&&<p style={{color:"#9A9080",fontSize:12,margin:"0 0 1rem",fontWeight:300}}>You're in <strong style={{color:"#1A1612",fontWeight:400}}>{userLocation.country}</strong>.</p>}
+            <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:"1.25rem"}}>
               {[
                 {val:"country",label:userLocation?userLocation.country+" only":"My country only",icon:userLocation?getFlag(userLocation.countryCode):"📍",desc:"Local shops & platforms"},
                 {val:"continent",label:userLocation?userLocation.continent:"My continent",icon:"🌍",desc:"Shops & platforms across your continent"},
@@ -803,10 +824,10 @@ export default function App() {
               ].map(({val,label,icon,desc})=>(
                 <button key={val} className={"choice-card "+(radius===val?"selected":"")} onClick={()=>setRadius(val)}>
                   <div style={{display:"flex",alignItems:"center",gap:12}}>
-                    <span style={{fontSize:24,lineHeight:1,flexShrink:0}}>{icon}</span>
+                    <span style={{fontSize:22,lineHeight:1,flexShrink:0}}>{icon}</span>
                     <div>
-                      <span style={{fontSize:14,color:"#2C2417",display:"block",fontWeight:500}}>{label}</span>
-                      <span style={{fontSize:12,color:"#A89880",display:"block",marginTop:2}}>{desc}</span>
+                      <span style={{fontSize:13,color:"#1A1612",display:"block",fontWeight:400}}>{label}</span>
+                      <span style={{fontSize:12,color:"#9A9080",display:"block",marginTop:2,fontWeight:300}}>{desc}</span>
                     </div>
                   </div>
                 </button>
@@ -819,14 +840,14 @@ export default function App() {
         {step==="searching"&&(
           <div className="slide-in spinner-wrap">
             <div className="spinner"/>
-            <p style={{color:"#2C2417",fontSize:13,letterSpacing:".1em",textTransform:"uppercase",fontWeight:600,margin:"0 0 5px"}}>Searching for you</p>
-            <p style={{color:"#A89880",fontSize:12,margin:"0 0 1.5rem"}}>Finding real listings &amp; local shops…</p>
+            <p style={{color:"#1A1612",fontSize:12,letterSpacing:".14em",textTransform:"uppercase",fontWeight:400,margin:"0 0 5px"}}>Searching for you</p>
+            <p style={{color:"#9A9080",fontSize:12,margin:"0 0 1.5rem",fontWeight:300}}>Finding real listings &amp; local shops…</p>
             <div className="ssteps">
               {[{label:"Scanning platforms for real listings",phase:1},{label:"Finding local hidden gem shops",phase:2},{label:"Putting it all together",phase:3}].map(({label,phase})=>(
                 <div key={phase} className="sstep">
                   <div className={"sdot "+(searchPhase>phase?"done":searchPhase===phase?"active":"pending")}/>
-                  <span style={{fontSize:13,color:searchPhase>=phase?"#2C2417":"#C2B9AE",fontWeight:searchPhase===phase?600:400}}>{label}</span>
-                  {searchPhase>phase&&<span style={{fontSize:11,color:"#7A9E7E",marginLeft:"auto"}}>✓</span>}
+                  <span style={{fontSize:13,color:searchPhase>=phase?"#1A1612":"#C8C0B4",fontWeight:searchPhase===phase?400:300}}>{label}</span>
+                  {searchPhase>phase&&<span style={{fontSize:11,color:"#5A7A5A",marginLeft:"auto"}}>✓</span>}
                 </div>
               ))}
             </div>
@@ -838,11 +859,11 @@ export default function App() {
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:"0.5rem"}}>
               <div>
                 <span className="lbl" style={{marginBottom:2}}>Results for</span>
-                <div style={{color:"#2C2417",fontSize:17,fontFamily:"'Playfair Display',serif",fontStyle:"italic"}}>{identifiedItem}</div>
+                <div style={{color:"#1A1612",fontSize:16,fontWeight:400}}>{identifiedItem}</div>
               </div>
               {imageData&&<img src={imageData} alt="" className="img-thumb"/>}
             </div>
-            <div style={{display:"flex",flexWrap:"wrap",gap:5,marginBottom:"0.85rem"}}>
+            <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:"0.85rem"}}>
               {effSize&&<span className="tag">Size {effSize}</span>}
               {condition==="new"&&<span className="tag">First-hand</span>}
               {condition==="used"&&<span className="tag">Second-hand</span>}
@@ -851,7 +872,7 @@ export default function App() {
               {(priceMin||priceMax)&&<span className="tag">{currency}{priceMin||"0"}–{priceMax?currency+priceMax:"any"}</span>}
               {radius&&userLocation&&<span className="tag">{locLbl()}</span>}
             </div>
-            <div style={{height:1,background:"linear-gradient(90deg,#C4924A,transparent)",opacity:.3,marginBottom:"1rem"}}/>
+            <div style={{height:1,background:"#EDEAE4",marginBottom:"1rem"}}/>
             <div className="sec-title"><span>Found online</span></div>
             {listings.length===0&&<div className="no-results">No listings found. Try broadening your location or adjusting filters.</div>}
             {listings.map((item,i)=>(
@@ -876,11 +897,11 @@ export default function App() {
             <button
               onClick={loadMoreListings}
               disabled={loadingMore}
-              style={{width:"100%",background:"none",border:"1.5px dashed #D9D0C3",borderRadius:10,padding:".75rem",fontSize:12,fontFamily:"'Nunito',sans-serif",fontWeight:600,color:loadingMore?"#C9C2B8":"#A89880",cursor:loadingMore?"not-allowed":"pointer",letterSpacing:".1em",textTransform:"uppercase",transition:"all .2s",marginBottom:".85rem",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}
-              onMouseEnter={e=>{if(!loadingMore){e.currentTarget.style.borderColor="#C4924A";e.currentTarget.style.color="#C4924A";}}}
-              onMouseLeave={e=>{e.currentTarget.style.borderColor="#D9D0C3";e.currentTarget.style.color=loadingMore?"#C9C2B8":"#A89880";}}>
+              style={{width:"100%",background:"none",border:"1px solid #EDEAE4",borderRadius:2,padding:".75rem",fontSize:11,fontFamily:"'Outfit',sans-serif",fontWeight:400,color:loadingMore?"#C8C0B4":"#9A9080",cursor:loadingMore?"not-allowed":"pointer",letterSpacing:".14em",textTransform:"uppercase",transition:"all .2s",marginBottom:".85rem",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}
+              onMouseEnter={e=>{if(!loadingMore){e.currentTarget.style.borderColor="#1A1612";e.currentTarget.style.color="#1A1612";}}}
+              onMouseLeave={e=>{e.currentTarget.style.borderColor="#EDEAE4";e.currentTarget.style.color=loadingMore?"#C8C0B4":"#9A9080";}}>
               {loadingMore
-                ? <><div style={{width:12,height:12,border:"1.5px solid #D9D0C3",borderTopColor:"#C4924A",borderRadius:"50%",animation:"spin 1s linear infinite"}}/> Searching…</>
+                ? <><div style={{width:11,height:11,border:"1px solid #EDEAE4",borderTopColor:"#1A1612",borderRadius:"50%",animation:"spin 1s linear infinite"}}/> Searching…</>
                 : <>↻ Show 3 new results</>}
             </button>
             <div className="divgem"><span className="gem">{condition==="new"?"🏪":"💎"}</span></div>
@@ -888,7 +909,7 @@ export default function App() {
             {condition!=="new"&&shopResults.length>0&&(
               <div className="tip-box">
                 <span style={{fontSize:16,flexShrink:0}}>🗺️</span>
-                <p style={{fontSize:12,color:"#4A6E4F",margin:0,lineHeight:1.5}}>Real stores that may carry this. Call ahead — the best finds are never online.</p>
+                <p style={{fontSize:12,color:"#5A7A5A",margin:0,lineHeight:1.5,fontWeight:300}}>Real stores that may carry this. Call ahead — the best finds are never online.</p>
               </div>
             )}
             {shopResults.length===0&&<div className="no-results">No local shops found. Try broadening your search radius.</div>}
@@ -897,9 +918,9 @@ export default function App() {
                 <div style={{display:"flex",alignItems:"flex-start"}}>
                   <span className="shop-num">{i+1}</span>
                   <div style={{flex:1}}>
-                    <div style={{fontSize:14,color:"#2C2417",fontWeight:600,marginBottom:3}}>{s.name}</div>
-                    {s.description&&<p style={{fontSize:12,color:"#5A6B5C",margin:"0 0 3px",lineHeight:1.5}}>{s.description}</p>}
-                    {s.tip&&<p style={{fontSize:12,color:"#A89880",margin:"0 0 4px",fontStyle:"italic"}}>"{s.tip}"</p>}
+                    <div style={{fontSize:13,color:"#1A1612",fontWeight:500,marginBottom:3}}>{s.name}</div>
+                    {s.description&&<p style={{fontSize:12,color:"#5A7A5A",margin:"0 0 3px",lineHeight:1.5,fontWeight:300}}>{s.description}</p>}
+                    {s.tip&&<p style={{fontSize:12,color:"#9A9080",margin:"0 0 4px",fontStyle:"italic",fontWeight:300}}>"{s.tip}"</p>}
                     <div>
                       <span className={"tag "+(condition!=="new"?"g":"")}>{condition==="new"?"Retail":"Physical store"}</span>
                       {s.address&&<span className="tag">{s.address}</span>}
@@ -909,7 +930,7 @@ export default function App() {
                 </div>
               </div>
             ))}
-            <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:"1rem"}}>
+            <div style={{display:"flex",flexDirection:"column",gap:6,marginTop:"1rem"}}>
               <button className="btn-ghost" onClick={()=>{setListings([]);setShopResults([]);setStep("condition");}}>Adjust filters &amp; search again</button>
               <button className="rescan" style={{display:"block",textAlign:"center"}} onClick={reset}>Start a new scan</button>
             </div>
