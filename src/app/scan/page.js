@@ -24,64 +24,62 @@ const getFlag = c => !c ? "🌍" : c.toUpperCase().replace(/./g, x => String.fro
 const getCurrency = cc => ({ GB:"£", US:"$", CA:"CA$", AU:"AU$", CH:"CHF", JP:"¥" }[cc] || "€");
 
 const getSearchPlatforms = (condition, cc, radius, cont, category) => {
-  const isEU = cont==="EU" || ["NL","BE","DE","FR","ES","IT","PT","SE","DK","NO","FI","PL","AT","CH"].includes(cc);
+  const isEU = cont==="EU" || ["NL","BE","DE","FR","ES","IT","PT","SE","DK","NO","FI","PL","AT","CH","CZ","HU","RO","HR","SK"].includes(cc);
+
   if (category === "watches") {
     if (condition === "new") return "Chrono24 (chrono24.com), Watchfinder (watchfinder.com), Watches of Switzerland, official brand websites";
-    return "Chrono24 (chrono24.com), Watchfinder (watchfinder.com), eBay, Catawiki, Watchbox";
+    return "Chrono24 (chrono24.com), Watchfinder (watchfinder.com), eBay, Catawiki (catawiki.com), Watchbox, Vinted, Grailed";
   }
   if (category === "jewelry") {
-    if (condition === "new") return "1stDibs (1stdibs.com), official brand websites, VRAI, Mejuri";
-    return "1stDibs (1stdibs.com), Etsy, eBay, Vestiaire Collective, Catawiki";
+    if (condition === "new") return "1stDibs (1stdibs.com), official brand websites, VRAI, Mejuri, Etsy";
+    return "1stDibs (1stdibs.com), Vestiaire Collective, Etsy, eBay, Catawiki (catawiki.com), Vinted";
   }
-  if (category === "shoes") {
-    if (condition === "new") {
-      if (isEU) return "Zalando, ASOS, Foot Locker (footlocker.eu), Snipes (snipes.com), About You, official brand websites (Nike.com, Adidas.com, New Balance)";
-      return "StockX (stockx.com), GOAT (goat.com), Foot Locker, ASOS, Farfetch, official brand websites";
-    }
-    if (isEU) return "Vinted (vinted.nl / vinted.fr / vinted.de), Marktplaats (marktplaats.nl), eBay, Vestiaire Collective, StockX (stockx.com), GOAT (goat.com), Depop, Grailed (grailed.com)";
-    return "StockX (stockx.com), GOAT (goat.com), eBay, Vinted, Vestiaire Collective, Grailed (grailed.com), Depop";
-  }
-  if (category === "tops" || category === "bottoms" || category === "dresses") {
-    if (condition === "new") {
-      if (isEU) return "Zalando, ASOS, About You, H&M, Zara, Uniqlo, Cos, Mango, Farfetch, END Clothing";
-      return "ASOS, Farfetch, SSENSE, END Clothing, Zalando, H&M, Zara";
-    }
-    if (isEU) return "Vinted (vinted.nl / vinted.fr / vinted.de), Marktplaats (marktplaats.nl), Depop, Vestiaire Collective, eBay, Grailed (grailed.com), Sellpy (sellpy.nl)";
-    return "Grailed (grailed.com), Depop, Vinted, Vestiaire Collective, eBay";
-  }
+
   const isNew = condition === "new";
-  if (isNew) {
+
+  // ── SECOND-HAND ──────────────────────────────────────────────────────────
+  // Platform priority based on URL stability:
+  // 🟢 eBay (GTC listings, sold pages stay online) > Grailed > Vestiaire Collective
+  // 🟡 Marktplaats / Vinted (moderate, 30d expiry / quick deletion)
+  // 🔴 Depop (least stable, sellers relist constantly)
+  if (!isNew) {
     if (radius === "country") {
-      if (cc==="NL") return "Zalando (zalando.nl), Bijenkorf (debijenkorf.nl), Wehkamp (wehkamp.nl), Bol.com, ASOS, About You, H&M, Zara, Uniqlo, Nike.com, Adidas.com";
-      if (cc==="BE") return "Zalando (zalando.be), bol.com, ASOS, H&M, Zara, Uniqlo, Nike.com, Adidas.com";
-      if (cc==="GB") return "ASOS, John Lewis (johnlewis.com), Selfridges, M&S, Next, Zara, H&M, Uniqlo, Nike.com, END Clothing";
-      if (cc==="US") return "Nordstrom, Saks Fifth Avenue, SSENSE, END Clothing, ASOS, Zara, H&M, Nike.com, Adidas.com";
-      if (cc==="DE") return "Zalando (zalando.de), About You (aboutyou.de), Otto (otto.de), H&M, Zara, Uniqlo, Nike.com, Adidas.com";
-      if (cc==="FR") return "Zalando (zalando.fr), ASOS, H&M, Zara, Uniqlo, Galeries Lafayette, Nike.com";
-      if (cc==="ES") return "Zalando (zalando.es), ASOS, Zara, H&M, Mango, El Corte Inglés, Nike.com";
-      return "Zalando, ASOS, H&M, Zara, Uniqlo, Nike.com, Adidas.com, About You";
+      if (cc==="NL") return "eBay.nl (ebay.nl), Grailed (grailed.com), Vestiaire Collective (vestiairecollective.com), Marktplaats (marktplaats.nl), Vinted NL (vinted.nl), Catawiki (catawiki.com), Sellpy (sellpy.nl), 2dehands (2dehands.be), Depop";
+      if (cc==="BE") return "eBay (ebay.com), Grailed (grailed.com), Vestiaire Collective (vestiairecollective.com), 2dehands (2dehands.be), Vinted BE (vinted.be), Catawiki (catawiki.com), Depop";
+      if (cc==="DE") return "eBay.de (ebay.de), Grailed (grailed.com), Vestiaire Collective (vestiairecollective.com), Kleinanzeigen (kleinanzeigen.de), Vinted DE (vinted.de), Catawiki (catawiki.com), Sellpy (sellpy.de), Depop";
+      if (cc==="FR") return "eBay.fr (ebay.fr), Grailed (grailed.com), Vestiaire Collective (vestiairecollective.com), Le Bon Coin (leboncoin.fr), Vinted FR (vinted.fr), Catawiki (catawiki.com), Vide Dressing (videdressing.com), Depop";
+      if (cc==="GB") return "eBay UK (ebay.co.uk), Grailed (grailed.com), Vestiaire Collective (vestiairecollective.com), Vinted UK (vinted.co.uk), Catawiki (catawiki.com), Preloved (preloved.co.uk), Depop";
+      if (cc==="ES") return "eBay.es (ebay.es), Grailed (grailed.com), Vestiaire Collective (vestiairecollective.com), Wallapop (wallapop.com), Vinted ES (vinted.es), Catawiki (catawiki.com), Micolet (micolet.com), Depop";
+      if (cc==="IT") return "eBay.it (ebay.it), Grailed (grailed.com), Vestiaire Collective (vestiairecollective.com), Subito (subito.it), Vinted IT (vinted.it), Catawiki (catawiki.com), Depop";
+      if (cc==="SE") return "eBay (ebay.com), Grailed (grailed.com), Vestiaire Collective (vestiairecollective.com), Tradera (tradera.com), Sellpy (sellpy.se), Vinted SE (vinted.se), Depop";
+      if (cc==="PL") return "eBay (ebay.com), Grailed (grailed.com), Vestiaire Collective (vestiairecollective.com), Allegro (allegro.pl), Vinted PL (vinted.pl), OLX (olx.pl), Depop";
+      if (cc==="US") return "eBay (ebay.com), Grailed (grailed.com), The RealReal (therealreal.com), Vestiaire Collective (vestiairecollective.com), StockX (stockx.com), Poshmark (poshmark.com), Depop, ThredUp";
+      return "eBay, Grailed, Vestiaire Collective, Vinted, Catawiki, Depop";
     }
-    if (radius === "continent") {
-      if (isEU) return "Zalando, ASOS, Farfetch (farfetch.com), Net-a-Porter (net-a-porter.com), Mytheresa (mytheresa.com), END Clothing (endclothing.com), About You, SSENSE, H&M, Zara, Uniqlo";
-      return "Farfetch, Net-a-Porter, SSENSE, Nordstrom, END Clothing, ASOS";
+    if (radius === "continent" || radius === "worldwide") {
+      if (isEU) return "eBay (ebay.de / ebay.fr / ebay.nl / ebay.co.uk / ebay.es / ebay.it), Grailed (grailed.com), Vestiaire Collective (vestiairecollective.com), Catawiki (catawiki.com), Vinted (vinted.nl / vinted.fr / vinted.de / vinted.be / vinted.es / vinted.it / vinted.pl), Marktplaats (marktplaats.nl), Le Bon Coin (leboncoin.fr), Kleinanzeigen (kleinanzeigen.de), Wallapop (wallapop.com), Sellpy (sellpy.nl / sellpy.de / sellpy.se), 2dehands (2dehands.be), Subito (subito.it), Allegro (allegro.pl), Depop (depop.com)";
+      return "eBay, Grailed, The RealReal, Vestiaire Collective, StockX, Vinted, Catawiki, Depop";
     }
-    return "Farfetch, SSENSE, Net-a-Porter, Mytheresa, END Clothing, Zalando, ASOS, Uniqlo";
+    return "eBay, Grailed, Vestiaire Collective, Catawiki, Vinted, Depop, Wallapop, Sellpy";
   }
+
+  // ── FIRST-HAND ────────────────────────────────────────────────────────────
   if (radius === "country") {
-    if (cc==="NL") return "Marktplaats (marktplaats.nl), Vinted NL (vinted.nl), Sellpy NL (sellpy.nl), Depop, eBay.nl, Vestiaire Collective, Grailed (grailed.com)";
-    if (cc==="BE") return "2dehands (2dehands.be), Vinted BE (vinted.be), eBay, Vestiaire Collective, Depop";
-    if (cc==="GB") return "eBay UK (ebay.co.uk), Vinted UK (vinted.co.uk), Depop, Vestiaire Collective, Grailed, Preloved";
-    if (cc==="DE") return "Kleinanzeigen (kleinanzeigen.de), Vinted DE (vinted.de), eBay.de, Vestiaire Collective, Sellpy, Grailed";
-    if (cc==="FR") return "Vinted FR (vinted.fr), Le Bon Coin (leboncoin.fr), Vestiaire Collective, eBay.fr, Vide Dressing";
-    if (cc==="ES") return "Wallapop (wallapop.com), Vinted ES, Vestiaire Collective, eBay.es, Micolet";
-    if (cc==="US") return "Grailed (grailed.com), Poshmark, Depop, The RealReal, StockX, eBay";
-    return "eBay, Vinted, Grailed, Depop, Vestiaire Collective";
+    if (cc==="NL") return "Zalando (zalando.nl), Bijenkorf (debijenkorf.nl), Wehkamp (wehkamp.nl), Bol.com, ASOS, About You, H&M, Zara, Uniqlo, Nike.com, Adidas.com";
+    if (cc==="BE") return "Zalando (zalando.be), Bol.com, ASOS, H&M, Zara, Uniqlo, Nike.com, Adidas.com";
+    if (cc==="DE") return "Zalando (zalando.de), About You (aboutyou.de), Otto (otto.de), H&M, Zara, Uniqlo, Nike.com, Adidas.com, Breuninger";
+    if (cc==="FR") return "Zalando (zalando.fr), ASOS, H&M, Zara, Uniqlo, Galeries Lafayette, Nike.com, Mango";
+    if (cc==="GB") return "ASOS, John Lewis (johnlewis.com), Selfridges, M&S, Next, Zara, H&M, Nike.com, END Clothing";
+    if (cc==="ES") return "Zalando (zalando.es), ASOS, Zara, H&M, Mango, El Corte Inglés, Nike.com";
+    if (cc==="IT") return "Zalando (zalando.it), ASOS, Zara, H&M, Mango, Farfetch (farfetch.com), Nike.com";
+    if (cc==="US") return "Nordstrom, Saks Fifth Avenue, SSENSE, END Clothing, ASOS, Zara, H&M, Nike.com, Adidas.com";
+    return "Zalando, ASOS, H&M, Zara, Uniqlo, Nike.com, Adidas.com, About You";
   }
   if (radius === "continent") {
-    if (isEU) return "Vinted (vinted.nl / vinted.fr / vinted.de / vinted.be), eBay (ebay.nl / ebay.de / ebay.co.uk), Vestiaire Collective, Depop, Grailed (grailed.com), Marktplaats (marktplaats.nl), Sellpy (sellpy.nl), Wallapop (wallapop.com), Catawiki (catawiki.com), Kleinanzeigen (kleinanzeigen.de), Le Bon Coin (leboncoin.fr)";
-    return "eBay, Grailed, Poshmark, Depop, The RealReal, StockX";
+    if (isEU) return "Zalando (zalando.com), ASOS (asos.com), Farfetch (farfetch.com), Net-a-Porter (net-a-porter.com), Mytheresa (mytheresa.com), About You (aboutyou.com), END Clothing (endclothing.com), SSENSE (ssense.com), H&M, Zara, Uniqlo, Mango, COS";
+    return "Farfetch, Net-a-Porter, SSENSE, Nordstrom, END Clothing, ASOS";
   }
-  return "eBay, Grailed (grailed.com), Vestiaire Collective, Depop, The RealReal, Poshmark, StockX, Catawiki, Vinted";
+  return "Farfetch, SSENSE, Net-a-Porter, Mytheresa, END Clothing, Zalando, ASOS, Uniqlo";
 };
 
 const parseJSON = text => {
@@ -117,7 +115,8 @@ const S = `
   @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500&display=swap');
   * { box-sizing:border-box; }
   .app { font-family:'Outfit',sans-serif; background:#fff; padding:2rem 1.75rem; max-width:600px; margin:0 auto; }
-  .app-nav { display:flex; justify-content:space-between; align-items:center; padding:1.25rem 1.75rem; border-bottom:1px solid #EDEAE4; background:#fff; position:sticky; top:0; z-index:10; }
+  .app-nav { display:flex; justify-content:space-between; align-items:center; padding:1.25rem 1.75rem; border-bottom:1px solid #EDEAE4; background:#fff; position:sticky; top:0; z-index:10; max-width:600px; margin:0 auto; }
+  .app-nav-wrap { border-bottom:1px solid #EDEAE4; background:#fff; position:sticky; top:0; z-index:10; }
   .app-nav-logo { font-size:15px; font-weight:400; letter-spacing:.12em; text-transform:uppercase; color:#1A1612; text-decoration:none; }
   .app-nav-link { font-size:11px; font-weight:300; letter-spacing:.15em; text-transform:uppercase; color:#9A9080; text-decoration:none; transition:color .2s; }
   .app-nav-link:hover { color:#1A1612; }
@@ -542,10 +541,15 @@ export default function ScanPage() {
   return (
     <>
       <style>{S}</style>
-      <nav className="app-nav">
-        <a href="/" className="app-nav-logo">Gemly</a>
-        <a href="/login" className="app-nav-link">Account</a>
-      </nav>
+      <div className="app-nav-wrap">
+        <nav className="app-nav">
+          <a href="/" className="app-nav-logo">Gemly</a>
+          <div style={{display:'flex',gap:'1.5rem',alignItems:'center'}}>
+            <a href="/" className="app-nav-link">← Home</a>
+            <a href="/login" className="app-nav-link">Account</a>
+          </div>
+        </nav>
+      </div>
       <div className="app slide-in">
         {currentIdx>=0&&<div className="progress-row">{STEP_ORDER.map((s,i)=><div key={s} className={"pdot "+(i<currentIdx?"done":i===currentIdx?"active":"")}/>)}</div>}
         {error&&<div className="err">{error}</div>}
