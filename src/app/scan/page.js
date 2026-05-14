@@ -378,29 +378,19 @@ export default function ScanPage() {
     const filters = [condText, qualText, sizeText, priceText].filter(Boolean).join(", ");
     const newItemInstruction = condition === "new" ? 'Priority: search official brand websites and established retail webshops first.\n' : '';
 
-    // VERSTERKTE PROMPT — meer sturing voor betere resultaten
     const listingPrompt =
-      'You are a shopping assistant. Search the web for real product listings of: "' + activeQ + '"\n\n' +
-      'PLATFORMS TO SEARCH (search these in order until you have 3 results):\n' + platforms + '\n\n' +
+      'Search the web for real listings of: "' + activeQ + '"\n' +
+      'Search on these platforms: ' + platforms + '\n' +
       newItemInstruction +
-      'FILTERS: ' + (filters || 'none') + '\n' +
-      'LOCATION: Only return listings available in or shipping to ' + locText + '.\n\n' +
-      'SEARCH STRATEGY:\n' +
-      '1. Search each platform directly — e.g. search "' + activeQ + ' site:marktplaats.nl" or "' + activeQ + ' site:vinted.nl"\n' +
-      '2. Click into actual product listing pages to get real prices and URLs\n' +
-      '3. If a platform has no results, immediately try the next one\n' +
-      '4. Relax size filter first if needed, then price filter\n\n' +
-      'STRICT RULES:\n' +
-      '- Return EXACTLY 3 listings — never fewer\n' +
-      '- Each listing must be a real, active, individual product page (not a search results page or homepage)\n' +
-      '- Each listing must have a real price in ' + currency + ' — never "N/A" or "Unknown"\n' +
-      '- Copy the exact product URL from the listing page\n\n' +
-      'Reply ONLY with this JSON, no other text:\n' +
-      '{"listings":[' +
-      '{"title":"exact product title","price":"' + currency + 'XX","platform":"platform name","url":"https://exact-listing-url","condition":"new/used/like new","location":"city or country"},' +
-      '{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},' +
-      '{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}' +
-      ']}';
+      'Filters: ' + filters + '\n' +
+      'LOCATION: Listings must be available in or ship to ' + locText + '. Only return results from sellers or platforms operating in ' + locText + '.\n\n' +
+      'CRITICAL RULES:\n' +
+      '1. ONLY return real, active product listing pages — never return homepage URLs, category pages, or search result pages\n' +
+      '2. NEVER return a listing with title like "Unable to find", "N/A", or any explanation — if you cannot find 3 results, relax size filter first, then price filter, then location\n' +
+      '3. Copy the exact URL of each individual listing from your search results\n' +
+      '4. Each listing must have a real price (e.g. "€89") — not "N/A"\n\n' +
+      'Reply ONLY with this JSON (no extra text):\n' +
+      '{"listings":[{"title":"...","price":"' + currency + 'XX","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
 
     const shopsPrompt =
       'Find 3 real physical ' + shopType + ' in ' + shopCity + ' that carry items like: "' + identifiedItem + '".\n' +
