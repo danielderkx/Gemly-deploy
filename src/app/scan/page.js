@@ -1,5 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from "react";
+import { createClient } from '../../lib/supabase';
 
 const SEARCHES_KEY = "gemly_recent_searches";
 const saveSearch = (query) => {
@@ -114,9 +115,11 @@ const STEP_ORDER = ["match_type","size","condition","quality","price","location"
 const S = `
   @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500&display=swap');
   * { box-sizing:border-box; }
-  .app { font-family:'Outfit',sans-serif; background:#fff; padding:2rem 1.75rem; max-width:600px; margin:0 auto; }
-  .app-nav { display:flex; justify-content:space-between; align-items:center; padding:1.25rem 1.75rem; border-bottom:1px solid #EDEAE4; background:#fff; position:sticky; top:0; z-index:10; max-width:600px; margin:0 auto; }
-  .app-nav-wrap { border-bottom:1px solid #EDEAE4; background:#fff; position:sticky; top:0; z-index:10; }
+  .page-wrap { min-height:100vh; background:#F5F0E8; width:100%; }
+  .app-nav-wrap { border-bottom:1px solid #EDEAE4; background:#fff; position:sticky; top:0; z-index:10; width:100%; }
+  .app-nav { display:flex; justify-content:space-between; align-items:center; padding:1.25rem 1.75rem; max-width:600px; margin:0 auto; }
+  .app { font-family:'Outfit',sans-serif; background:#fff; padding:2rem 1.75rem; max-width:600px; margin:0 auto; min-height:calc(100vh - 60px); }
+  @media (max-width:640px) { .app { padding:1.5rem 1.25rem; } .app-nav { padding:1rem 1.25rem; } }
   .app-nav-logo { font-size:15px; font-weight:400; letter-spacing:.12em; text-transform:uppercase; color:#1A1612; text-decoration:none; }
   .app-nav-link { font-size:11px; font-weight:300; letter-spacing:.15em; text-transform:uppercase; color:#9A9080; text-decoration:none; transition:color .2s; }
   .app-nav-link:hover { color:#1A1612; }
@@ -245,7 +248,14 @@ export default function ScanPage() {
   const fileRef = useRef();
   const camRef = useRef();
 
-  useEffect(() => { detectLocation(); }, []);
+  useEffect(() => {
+    detectLocation();
+    // Auth check — redirect to login if not signed in
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) window.location.href = '/login';
+    });
+  }, []);
 
   const detectLocation = async () => {
     setLocLoading(true);
@@ -539,7 +549,7 @@ export default function ScanPage() {
   };
 
   return (
-    <>
+    <div className="page-wrap">
       <style>{S}</style>
       <div className="app-nav-wrap">
         <nav className="app-nav">
@@ -863,6 +873,6 @@ export default function ScanPage() {
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }
