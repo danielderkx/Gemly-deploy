@@ -110,7 +110,7 @@ const QUALITY_OPTS = [
   { val:"fair",          label:"Fair / worn",    desc:"Visible wear, fully usable",  dot:"#FF9800" },
   { val:"any",           label:"Any condition",  desc:"Show me everything",          dot:"#C9C2B8" },
 ];
-const STEP_ORDER = ["match_type","size","condition","quality","price","location","results"];
+const STEP_ORDER = ["match_type","gender","size","condition","quality","price","location","results"];
 
 const S = `
   @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500&display=swap');
@@ -244,6 +244,7 @@ export default function ScanPage() {
   const [priceEst, setPriceEst] = useState(null);
   const [priceEstLoading, setPriceEstLoading] = useState(false);
   const [searchPhase, setSearchPhase] = useState(0);
+  const [gender, setGender] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const fileRef = useRef();
   const camRef = useRef();
@@ -384,7 +385,8 @@ export default function ScanPage() {
     const priceText = (priceMin||priceMax) ? "price "+currency+(priceMin||"0")+"-"+currency+(priceMax||"any") : "";
     const platforms = getSearchPlatforms(condition, userLocation?.countryCode, radius, userLocation?.continentCode, itemCategory);
     const shopType = condition==="new" ? "physical retail stores or boutiques" : "physical vintage, thrift, consignment or streetwear stores";
-    const filters = [condText, qualText, sizeText, priceText].filter(Boolean).join(", ");
+    const genderText = gender && gender !== 'skip' ? gender : '';
+    const filters = [condText, qualText, sizeText, genderText, priceText].filter(Boolean).join(", ");
     const newItemInstruction = condition === "new" ? 'Priority: search official brand websites and established retail webshops first.\n' : '';
 
     const listingPrompt =
@@ -456,7 +458,8 @@ export default function ScanPage() {
     const sizeText = effSize ? "size "+effSize : "";
     const priceText = (priceMin||priceMax) ? "price "+currency+(priceMin||"0")+"-"+currency+(priceMax||"any") : "";
     const platforms = getSearchPlatforms(condition, userLocation?.countryCode, radius, userLocation?.continentCode, itemCategory);
-    const filters = [condText, qualText, sizeText, priceText].filter(Boolean).join(", ");
+    const genderText = gender && gender !== 'skip' ? gender : '';
+    const filters = [condText, qualText, sizeText, genderText, priceText].filter(Boolean).join(", ");
     const newItemInstruction = condition === "new" ? 'Priority: search official brand websites and established retail webshops first.\n' : '';
     const alreadyShown = listings.map(l => l.url).filter(Boolean).join(", ");
 
@@ -493,7 +496,7 @@ export default function ScanPage() {
   const reset = () => {
     setStep("upload"); setInputMode("photo"); setTextQuery(""); setImageData(null); setImageBase64(null);
     setIdentifiedItem(""); setSearchQuery(""); setSimilarQuery(""); setItemCategory(null); setSizeRelevant(false);
-    setMatchType(null); setSizeCat(null); setSelectedSize(null); setCustomSize("");
+    setMatchType(null); setGender(null); setSizeCat(null); setSelectedSize(null); setCustomSize("");
     setCondition(null); setQuality(null); setPriceMin(""); setPriceMax(""); setRadius(null);
     setListings([]); setShopResults([]); setError("");
     setPriceEst(null); setPriceEstLoading(false); setSearchPhase(0);
@@ -654,7 +657,30 @@ export default function ScanPage() {
                 </button>
               ))}
             </div>
-            <button className="btn-primary" disabled={!matchType} onClick={()=>setStep(sizeRelevant?"size":"condition")}>Continue</button>
+            <button className="btn-primary" disabled={!matchType} onClick={()=>setStep("gender")}>Continue</button>
+          </div>
+        )}
+
+        {step==="gender"&&(
+          <div className="slide-in">
+            <Back to="match_type"/>
+            <span className="lbl">Who is it for?</span>
+            <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:"1.25rem"}}>
+              {[
+                {val:"women",label:"Women",icon:"♀"},
+                {val:"men",label:"Men",icon:"♂"},
+                {val:"unisex",label:"Unisex",icon:"⊕"},
+                {val:"skip",label:"Skip this step",icon:"→"},
+              ].map(({val,label,icon})=>(
+                <button key={val} className={"choice-card "+(gender===val?"selected":"")} onClick={()=>setGender(val)}>
+                  <div style={{display:"flex",alignItems:"center",gap:12}}>
+                    <span style={{fontSize:18,flexShrink:0,opacity:.7}}>{icon}</span>
+                    <span style={{fontSize:13,color:"#1A1612",fontWeight:400}}>{label}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+            <button className="btn-primary" disabled={!gender} onClick={()=>setStep(sizeRelevant?"size":"condition")}>Continue</button>
           </div>
         )}
 
