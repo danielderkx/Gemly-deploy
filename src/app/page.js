@@ -138,6 +138,13 @@ export default function LandingPage() {
         ))}
       </div>
 
+      {/* Referral strip */}
+      <div style={{ background:'#F5F0E8', borderTop:'1px solid #EDEAE4', borderBottom:'1px solid #EDEAE4', padding:'1.5rem 2.5rem', textAlign:'center' }}>
+        <p style={{ fontSize:13, fontWeight:300, color:'#9A9080', lineHeight:1.6 }}>
+          🤝 Know someone who loves finding deals? Share your link — they get <strong style={{ color:'#1A1612' }}>3 free searches</strong>, you get <strong style={{ color:'#1A1612' }}>3 credits</strong>.
+        </p>
+      </div>
+
       {/* CTA */}
       <div className="cta-section" style={{ background:'#1A1612', padding:'4rem 2.5rem', textAlign:'center' }}>
         <p style={{ fontSize:11, fontWeight:300, letterSpacing:'.25em', textTransform:'uppercase', color:'#4A4540', marginBottom:'1.5rem' }}>Get started today</p>
