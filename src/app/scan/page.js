@@ -2,14 +2,16 @@
 import { useState, useRef, useEffect } from "react";
 import { createClient } from '../../lib/supabase';
 
-const SEARCHES_KEY = "gemly_recent_searches";
-const saveSearch = (query) => {
+const saveSearch = async (query) => {
   try {
-    const existing = JSON.parse(localStorage.getItem(SEARCHES_KEY) || "[]");
-    const updated = [query, ...existing.filter(q => q !== query)].slice(0, 20);
-    localStorage.setItem(SEARCHES_KEY, JSON.stringify(updated));
-    const count = parseInt(localStorage.getItem("gemly_search_count") || "0") + 1;
-    localStorage.setItem("gemly_search_count", count);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data: profile } = await supabase.from('profiles').select('search_history').eq('id', user.id).single();
+    const existing = profile?.search_history || [];
+    const newEntry = { query, date: new Date().toISOString() };
+    const updated = [newEntry, ...existing.filter(h => h.query !== query)].slice(0, 5);
+    await supabase.from('profiles').update({ search_history: updated }).eq('id', user.id);
   } catch {}
 };
 
