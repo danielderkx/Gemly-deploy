@@ -1,5 +1,6 @@
 'use client';
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { createClient } from '../../lib/supabase';
 
 const COUNTRIES = [
@@ -8,8 +9,9 @@ const COUNTRIES = [
   "Switzerland","Poland","Australia","Canada","Japan","Other"
 ];
 
-export default function LoginPage() {
-  const [isSignUp, setIsSignUp] = useState(false);
+function LoginContent() {
+  const searchParams = useSearchParams();
+  const [isSignUp, setIsSignUp] = useState(() => searchParams.get('signup') === 'true');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -25,7 +27,6 @@ export default function LoginPage() {
     setLoading(true); setMessage(''); setIsError(false);
     if (isSignUp) {
       if (!terms) { setMessage('Please accept the terms and conditions.'); setIsError(true); setLoading(false); return; }
-      // Check for referral code
       const refCode = typeof window !== 'undefined' ? localStorage.getItem('gemly_ref') : null;
       const { error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName, country, referred_by: refCode } } });
       if (!error && refCode) localStorage.removeItem('gemly_ref');
@@ -131,5 +132,13 @@ export default function LoginPage() {
         <a href="/" style={{ fontSize:10, fontWeight:300, letterSpacing:'.15em', textTransform:'uppercase', color:'#C8C0B4', textDecoration:'none' }}>← Back</a>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight:'100vh', background:'#F5F0E8' }}/>}>
+      <LoginContent />
+    </Suspense>
   );
 }
