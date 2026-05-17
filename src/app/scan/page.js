@@ -245,6 +245,7 @@ export default function ScanPage() {
   const [priceEstLoading, setPriceEstLoading] = useState(false);
   const [searchPhase, setSearchPhase] = useState(0);
   const [gender, setGender] = useState(null);
+  const [credits, setCredits] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const fileRef = useRef();
   const camRef = useRef();
@@ -425,6 +426,12 @@ export default function ScanPage() {
         setError("Too many requests — please wait 30 seconds and try again.");
         setStep("location"); return;
       }
+      if (listingData?.error === "no_credits") {
+        setStep("no_credits"); return;
+      }
+      if (listingData?._credits_remaining !== undefined) {
+        setCredits(listingData._credits_remaining);
+      }
       const txt = (listingData.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
       const p = parseJSON(txt);
       if (p?.listings?.length) foundListings = p.listings.slice(0,3);
@@ -559,6 +566,7 @@ export default function ScanPage() {
           <a href="/" className="app-nav-logo">Gemly</a>
           <div style={{display:'flex',gap:'1.5rem',alignItems:'center'}}>
             <a href="/" className="app-nav-link">← Home</a>
+            {credits !== null && <span style={{fontSize:10,fontWeight:300,letterSpacing:'.15em',textTransform:'uppercase',color:'#9A9080'}}>{credits} left</span>}
             <a href="/login" className="app-nav-link">Account</a>
           </div>
         </nav>
@@ -817,6 +825,34 @@ export default function ScanPage() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {step==="no_credits"&&(
+          <div className="slide-in" style={{textAlign:"center",padding:"2rem 0"}}>
+            <div style={{fontSize:48,marginBottom:"1rem"}}>💎</div>
+            <p style={{fontSize:10,fontWeight:300,letterSpacing:".25em",textTransform:"uppercase",color:"#9A9080",marginBottom:".5rem"}}>Out of searches</p>
+            <h2 style={{fontSize:26,fontWeight:200,color:"#1A1612",marginBottom:".75rem",letterSpacing:"-.01em"}}>Get more searches</h2>
+            <p style={{fontSize:13,fontWeight:300,color:"#9A9080",marginBottom:"2rem",lineHeight:1.6}}>You've used all your free searches.<br/>Pick a plan to keep finding deals.</p>
+            <div style={{display:"flex",flexDirection:"column",gap:10,maxWidth:320,margin:"0 auto",marginBottom:"1.5rem"}}>
+              {[
+                {name:"Starter",searches:10,price:"€4,99"},
+                {name:"Plus",searches:30,price:"€11,99"},
+                {name:"Pro",searches:100,price:"€29,99"},
+              ].map(p=>(
+                <div key={p.name} style={{background:"#F5F0E8",border:"1px solid #EDEAE4",borderRadius:2,padding:".85rem 1.1rem",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:400,color:"#1A1612"}}>{p.name}</div>
+                    <div style={{fontSize:11,fontWeight:300,color:"#9A9080"}}>{p.searches} searches</div>
+                  </div>
+                  <div style={{fontSize:15,fontWeight:500,color:"#1A1612"}}>{p.price}</div>
+                </div>
+              ))}
+            </div>
+            <a href="/pricing" style={{display:"inline-block",background:"#1A1612",color:"#fff",fontSize:11,fontWeight:400,letterSpacing:".2em",textTransform:"uppercase",textDecoration:"none",padding:"13px 32px",marginBottom:"1rem"}}>
+              Get more searches
+            </a>
+            <div><button className="rescan" onClick={reset}>← Start over</button></div>
           </div>
         )}
 
