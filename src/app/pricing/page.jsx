@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 const PACKAGES = [
@@ -29,7 +29,7 @@ const PACKAGES = [
   },
 ];
 
-export default function PricingPage() {
+function PricingContent() {
   const [loading, setLoading] = useState(null);
   const searchParams = useSearchParams();
   const paymentSuccess = searchParams.get('payment') === 'success';
@@ -152,5 +152,13 @@ export default function PricingPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function PricingPage() {
+  return (
+    <Suspense fallback={<div style={{minHeight:'100vh',background:'#F5F0E8'}}/>}>
+      <PricingContent />
+    </Suspense>
   );
 }
