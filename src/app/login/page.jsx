@@ -25,13 +25,16 @@ export default function LoginPage() {
     setLoading(true); setMessage(''); setIsError(false);
     if (isSignUp) {
       if (!terms) { setMessage('Please accept the terms and conditions.'); setIsError(true); setLoading(false); return; }
-      const { error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName, country } } });
+      // Check for referral code
+      const refCode = typeof window !== 'undefined' ? localStorage.getItem('gemly_ref') : null;
+      const { error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName, country, referred_by: refCode } } });
+      if (!error && refCode) localStorage.removeItem('gemly_ref');
       if (error) { setMessage(error.message); setIsError(true); }
       else setMessage('Check your email for a confirmation link.');
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) { setMessage(error.message); setIsError(true); }
-      else window.location.href = '/';
+      else window.location.href = '/scan';
     }
     setLoading(false);
   };
