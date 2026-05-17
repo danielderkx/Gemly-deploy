@@ -1,23 +1,29 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { createClient } from '../../lib/supabase';
 
 export default function LandingPage() {
   const [visible, setVisible] = useState(false);
-  useEffect(() => { setTimeout(() => setVisible(true), 80); }, []);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    setTimeout(() => setVisible(true), 80);
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsLoggedIn(!!session);
+    });
+  }, []);
 
   return (
     <div style={{ margin:0, padding:0, background:'#fff', minHeight:'100vh', fontFamily:"'Outfit', sans-serif", color:'#1A1612' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500&display=swap');
         *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
-
         .nav-link { font-family:'Outfit',sans-serif; font-size:12px; font-weight:300; letter-spacing:.18em; text-transform:uppercase; color:#999; text-decoration:none; transition:color .2s; }
         .nav-link:hover { color:#1A1612; }
         .cta-btn { display:inline-block; font-family:'Outfit',sans-serif; font-size:11px; font-weight:300; letter-spacing:.22em; text-transform:uppercase; color:#1A1612; background:transparent; border:1px solid #C8C0B4; text-decoration:none; padding:13px 32px; transition:background .2s, color .2s; }
         .cta-btn:hover { background:#1A1612; color:#fff; border-color:#1A1612; }
         .feature-item { border-top:1px solid #EDEAE4; padding:2rem 0; }
-
-        /* Mobile */
         @media (max-width: 680px) {
           .hero-grid { grid-template-columns: 1fr !important; padding: 3rem 1.5rem !important; gap: 3rem !important; }
           .phone-wrap { display: flex; justify-content: center; }
@@ -36,15 +42,16 @@ export default function LandingPage() {
           <div style={{ fontSize:16, fontWeight:400, letterSpacing:'.12em', textTransform:'uppercase' }}>Gemly</div>
           <div className="nav-links" style={{ display:'flex', gap:'2.5rem', alignItems:'center' }}>
             <a href="#how" className="nav-link">How it works</a>
-            <a href="/login" className="nav-link">Sign in</a>
+            {isLoggedIn
+              ? <a href="/account" className="nav-link">Account</a>
+              : <a href="/login" className="nav-link">Sign in</a>
+            }
           </div>
         </div>
       </nav>
 
       {/* Hero */}
       <div className="hero-grid" style={{ background:'#F0EBE2', padding:'5rem 2.5rem', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'4rem', alignItems:'center', opacity:visible?1:0, transition:'opacity .9s ease' }}>
-
-        {/* Left */}
         <div>
           <p style={{ fontSize:11, fontWeight:300, letterSpacing:'.28em', textTransform:'uppercase', color:'#9A8E80', marginBottom:'1.5rem' }}>Scan & Find</p>
           <h1 style={{ fontWeight:200, fontSize:'clamp(32px,5.5vw,62px)', lineHeight:1.1, letterSpacing:'-.02em', color:'#1A1612', marginBottom:'1.25rem' }}>
@@ -53,10 +60,12 @@ export default function LandingPage() {
           <p style={{ fontSize:14, fontWeight:300, color:'#8A8070', lineHeight:1.8, marginBottom:'2.5rem', maxWidth:380 }}>
             Scan any item and find the best secondhand deal — or new if nothing's available. Across every major platform, filtered to you.
           </p>
-          <a href="/scan" className="cta-btn">Start scanning</a>
+          <a href={isLoggedIn ? "/scan" : "/login"} className="cta-btn">
+            {isLoggedIn ? "Go to scanner" : "Start scanning"}
+          </a>
         </div>
 
-        {/* Right — phone mockup */}
+        {/* Phone mockup */}
         <div className="phone-wrap">
           <div style={{ position:'relative', width:240, height:480 }}>
             <div style={{ position:'absolute', inset:0, background:'#1A1612', borderRadius:40, boxShadow:'0 40px 80px rgba(0,0,0,.15), 0 8px 24px rgba(0,0,0,.1)' }} />
