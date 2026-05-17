@@ -103,7 +103,7 @@ function PricingContent() {
         </div>
 
         {/* Packages */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: '2rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: '2rem' }}>
           {PACKAGES.map(pkg => (
             <div key={pkg.name} style={{
               background: '#fff',
