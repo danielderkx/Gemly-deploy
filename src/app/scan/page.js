@@ -40,11 +40,6 @@ const getSearchPlatforms = (condition, cc, radius, cont, category) => {
 
   const isNew = condition === "new";
 
-  // ── SECOND-HAND ──────────────────────────────────────────────────────────
-  // Platform priority based on URL stability:
-  // 🟢 eBay (GTC listings, sold pages stay online) > Grailed > Vestiaire Collective
-  // 🟡 Marktplaats / Vinted (moderate, 30d expiry / quick deletion)
-  // 🔴 Depop (least stable, sellers relist constantly)
   if (!isNew) {
     if (radius === "country") {
       if (cc==="NL") return "eBay.nl (ebay.nl), Grailed (grailed.com), Vestiaire Collective (vestiairecollective.com), Marktplaats (marktplaats.nl), Vinted NL (vinted.nl), Catawiki (catawiki.com), Sellpy (sellpy.nl), 2dehands (2dehands.be), Depop";
@@ -66,7 +61,6 @@ const getSearchPlatforms = (condition, cc, radius, cont, category) => {
     return "eBay, Grailed, Vestiaire Collective, Catawiki, Vinted, Depop, Wallapop, Sellpy";
   }
 
-  // ── FIRST-HAND ────────────────────────────────────────────────────────────
   if (radius === "country") {
     if (cc==="NL") return "Zalando (zalando.nl), Bijenkorf (debijenkorf.nl), Wehkamp (wehkamp.nl), Bol.com, ASOS, About You, H&M, Zara, Uniqlo, Nike.com, Adidas.com";
     if (cc==="BE") return "Zalando (zalando.be), Bol.com, ASOS, H&M, Zara, Uniqlo, Nike.com, Adidas.com";
@@ -254,15 +248,55 @@ export default function ScanPage() {
 
   useEffect(() => {
     detectLocation();
-    // Auth check — redirect to login if not signed in
     const supabase = createClient();
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) window.location.href = '/login';
     });
   }, []);
 
+  // FIX 2: GPS first, IP fallback
   const detectLocation = async () => {
     setLocLoading(true);
+    try {
+      // Try browser GPS first
+      if (navigator.geolocation) {
+        await new Promise((resolve) => {
+          navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+              try {
+                const { latitude, longitude } = pos.coords;
+                const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=en`);
+                const d = await r.json();
+                const addr = d.address || {};
+                const countryCode = addr.country_code?.toUpperCase() || "";
+                setUserLocation({
+                  country: addr.country || "",
+                  countryCode,
+                  city: addr.city || addr.town || addr.village || addr.municipality || "",
+                  continent: getContinent(null),
+                  continentCode: null,
+                });
+              } catch {}
+              resolve();
+            },
+            async () => {
+              // GPS denied — fall back to IP
+              await detectByIP();
+              resolve();
+            },
+            { timeout: 5000 }
+          );
+        });
+      } else {
+        await detectByIP();
+      }
+    } catch {
+      await detectByIP();
+    }
+    setLocLoading(false);
+  };
+
+  const detectByIP = async () => {
     try {
       let d = null;
       try { const r = await fetch("https://ipapi.co/json/"); d = await r.json(); } catch {}
@@ -271,7 +305,6 @@ export default function ScanPage() {
       }
       if (d?.country_name) setUserLocation({ country:d.country_name, countryCode:d.country_code, city:d.city, continent:getContinent(d.continent_code), continentCode:d.continent_code });
     } catch {}
-    setLocLoading(false);
   };
 
   const handleFile = file => {
@@ -406,11 +439,12 @@ export default function ScanPage() {
       'Reply ONLY with this JSON (no extra text):\n' +
       '{"listings":[{"title":"...","price":"' + currency + 'XX","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
 
+    // FIX 3: Web search for shops so they actually exist
     const shopsPrompt =
-      'Find 3 real physical ' + shopType + ' in ' + shopCity + ' that carry items like: "' + identifiedItem + '".\n' +
-      'Search: ' + shopType + ' ' + shopCity + '\n' +
-      'Only stores physically in ' + shopCity + '. Include real website URLs.\n' +
-      'Reply ONLY JSON: {"shops":[{"name":"...","description":"1 sentence","address":"city, country","url":"https://...","tip":"why they carry this"},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."}]}';
+      'Search for real physical ' + shopType + ' in ' + shopCity + ' that carry items like: "' + identifiedItem + '".\n' +
+      'Search Google for: ' + shopType + ' ' + shopCity + '\n' +
+      'CRITICAL: Only include stores that actually exist and are physically located in ' + shopCity + '. Verify each store exists before including it.\n' +
+      'Reply ONLY JSON: {"shops":[{"name":"...","description":"1 sentence","address":"street, city","url":"https://...","tip":"why they carry this"},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."}]}';
 
     let foundListings = [];
     let foundShops = [];
@@ -444,11 +478,13 @@ export default function ScanPage() {
     if (foundListings.length > 0) saveSearch(identifiedItem);
     setStep("results");
 
+    // FIX 3: Use sonnet + web_search for shops
     try {
       const shopData = await fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
-          model:"claude-haiku-4-5", max_tokens:500,
+          model:"claude-sonnet-4-5", max_tokens:800,
+          tools:[{ type:"web_search_20250305", name:"web_search", max_uses:2 }],
           messages:[{ role:"user", content: shopsPrompt }]
         }),
       }).then(r=>r.json());
@@ -480,7 +516,6 @@ export default function ScanPage() {
       'LOCATION: ' + locText + '\n\n' +
       'ALREADY SHOWN — do NOT repeat these URLs:\n' + alreadyShown + '\n\n' +
       'Find 3 DIFFERENT listings from different sellers or platforms.\n' +
-      'Search strategy: try platforms not yet shown, different sellers, different conditions.\n' +
       'RULES: Real active product pages only, real prices, exact URLs.\n\n' +
       'Reply ONLY JSON:\n' +
       '{"listings":[{"title":"...","price":"' + currency + 'XX","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
@@ -569,7 +604,8 @@ export default function ScanPage() {
           <div style={{display:'flex',gap:'1.5rem',alignItems:'center'}}>
             <a href="/" className="app-nav-link">← Home</a>
             {credits !== null && <span style={{fontSize:10,fontWeight:300,letterSpacing:'.15em',textTransform:'uppercase',color:'#9A9080'}}>{credits} left</span>}
-            <a href="/login" className="app-nav-link">Account</a>
+            {/* FIX 1: Link naar /account pagina */}
+            <a href="/account" className="app-nav-link">Account</a>
           </div>
         </nav>
       </div>
