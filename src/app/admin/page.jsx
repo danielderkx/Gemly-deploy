@@ -45,12 +45,24 @@ export default function AdminPage() {
     return sortDir === 'asc' ? av - bv : bv - av;
   });
 
-  // Revenue calculations
   const totalRevenue = orders.reduce((s, o) => s + (o.amount_eur || 0), 0);
   const totalStripeFees = orders.reduce((s, o) => s + stripeFee(o.amount_eur || 0), 0);
   const totalSearches = users.reduce((s, u) => s + (u.total_searches || 0), 0);
   const totalApiCosts = totalSearches * API_COST;
   const netProfit = totalRevenue - totalStripeFees - totalApiCosts;
+
+  // Country breakdown
+  const countryMap = {};
+  users.forEach(u => {
+    const c = u.country || 'Unknown';
+    if (!countryMap[c]) countryMap[c] = { users: 0, searches: 0 };
+    countryMap[c].users++;
+    countryMap[c].searches += u.total_searches || 0;
+  });
+  const countries = Object.entries(countryMap)
+    .map(([name, d]) => ({ name, ...d }))
+    .sort((a, b) => b.users - a.users);
+  const maxUsers = countries[0]?.users || 1;
 
   const Arrow = ({ col }) => (
     <span style={{ color: sortBy === col ? '#1A1612' : '#C8C0B4', fontSize: 10, marginLeft: 4 }}>
@@ -121,7 +133,7 @@ export default function AdminPage() {
         </div>
 
         {/* Users row */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: '1.5rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 10 }}>
           {[
             { label: 'Total users', value: users.length, sub: 'registered' },
             { label: 'Active', value: users.filter(u => u.total_searches > 0).length, sub: '≥1 search done' },
@@ -134,6 +146,27 @@ export default function AdminPage() {
               <div style={{ fontSize: 11, color: '#C8C0B4', fontWeight: 300 }}>{sub}</div>
             </div>
           ))}
+        </div>
+
+        {/* Country breakdown */}
+        <div style={{ background: '#fff', border: '1px solid #EDEAE4', borderRadius: 2, padding: '1.25rem 1.5rem', marginBottom: '1.5rem' }}>
+          <div style={{ fontSize: 10, fontWeight: 400, letterSpacing: '.16em', textTransform: 'uppercase', color: '#9A9080', marginBottom: '1rem' }}>Users by country</div>
+          {countries.length === 0 ? (
+            <p style={{ fontSize: 13, color: '#C8C0B4', fontWeight: 300 }}>No data yet.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {countries.map(({ name, users: count, searches }) => (
+                <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 120, fontSize: 13, fontWeight: 300, color: '#1A1612', flexShrink: 0 }}>{name}</div>
+                  <div style={{ flex: 1, height: 6, background: '#F5F0E8', borderRadius: 1, overflow: 'hidden' }}>
+                    <div style={{ width: `${(count / maxUsers) * 100}%`, height: '100%', background: '#1A1612', borderRadius: 1, transition: 'width .4s' }} />
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: '#1A1612', width: 24, textAlign: 'right', flexShrink: 0 }}>{count}</div>
+                  <div style={{ fontSize: 11, color: '#C8C0B4', fontWeight: 300, width: 80, flexShrink: 0 }}>{searches} searches</div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Tabs */}
@@ -233,7 +266,7 @@ export default function AdminPage() {
                     </tr>
                   );
                 })}
-                {orders.length === 0 && <tr><td colSpan={8} style={{ padding: '2rem', textAlign: 'center', color: '#9A9080', fontSize: 13 }}>No orders yet. Do a test payment via gemly.org/pricing to see it here.</td></tr>}
+                {orders.length === 0 && <tr><td colSpan={8} style={{ padding: '2rem', textAlign: 'center', color: '#9A9080', fontSize: 13 }}>No orders yet.</td></tr>}
               </tbody>
             </table>
           </div>
