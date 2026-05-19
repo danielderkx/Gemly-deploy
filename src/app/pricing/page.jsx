@@ -1,35 +1,35 @@
 'use client';
-import { useState, Suspense } from 'react';
+import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 const PACKAGES = [
   {
     name: 'Starter',
-    price: '€4,99',
+    price: '€5,99',
     searches: 10,
-    priceId: 'price_1TY4j5Iy2dxBbN1t9i4D39r6',
-    perSearch: '€0,50',
+    priceId: 'price_1TYoLOIy2dxBbN1tDEDjrvAo',
+    perSearch: '€0,60',
     highlight: false,
   },
   {
     name: 'Plus',
-    price: '€11,99',
+    price: '€12,99',
     searches: 30,
-    priceId: 'price_1TY4kbIy2dxBbN1tAvOpw9IT',
-    perSearch: '€0,40',
+    priceId: 'price_1TYoMIIy2dxBbN1tMsacEGz0',
+    perSearch: '€0,43',
     highlight: true,
   },
   {
     name: 'Pro',
-    price: '€29,99',
+    price: '€34,99',
     searches: 100,
     priceId: 'price_1TY4ljIy2dxBbN1tUdUGl47a',
-    perSearch: '€0,30',
+    perSearch: '€0,35',
     highlight: false,
   },
 ];
 
-function PricingContent() {
+export default function PricingPage() {
   const [loading, setLoading] = useState(null);
   const searchParams = useSearchParams();
   const paymentSuccess = searchParams.get('payment') === 'success';
@@ -53,112 +53,88 @@ function PricingContent() {
       }
     } catch {
       alert('Something went wrong. Please try again.');
+    } finally {
+      setLoading(null);
     }
-    setLoading(null);
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F5F0E8', fontFamily: "'Outfit', sans-serif" }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500&display=swap');
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        .pkg-btn { width: 100%; background: #1A1612; color: #fff; border: none; padding: 13px; font-size: 11px; font-family: 'Outfit', sans-serif; font-weight: 400; letter-spacing: .2em; text-transform: uppercase; cursor: pointer; transition: background .2s; border-radius: 2px; }
-        .pkg-btn:hover { background: #3A3028; }
-        .pkg-btn:disabled { background: #C8C0B4; cursor: not-allowed; }
-        .pkg-btn.highlight { background: #1A1612; }
-        .nav-link { font-size: 11px; font-weight: 300; letter-spacing: .15em; text-transform: uppercase; color: #9A9080; text-decoration: none; transition: color .2s; }
-        .nav-link:hover { color: #1A1612; }
-      `}</style>
-
+    <div style={{ minHeight: '100vh', background: '#FAF8F5', fontFamily: "'Outfit', sans-serif" }}>
       {/* Nav */}
-      <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 2.5rem', borderBottom: '1px solid #E8E0D4', background: '#F5F0E8' }}>
-        <a href="/" style={{ fontSize: 16, fontWeight: 400, letterSpacing: '.12em', textTransform: 'uppercase', color: '#1A1612', textDecoration: 'none' }}>Gemly</a>
-        <a href="/scan" className="nav-link">← Back to scanner</a>
+      <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem 2rem', borderBottom: '0.5px solid #E8E4DE' }}>
+        <a href="/" style={{ fontSize: 14, fontWeight: 500, letterSpacing: '.15em', textTransform: 'uppercase', color: '#1A1612', textDecoration: 'none' }}>GEMLY</a>
+        <a href="/scan" style={{ fontSize: 11, fontWeight: 400, letterSpacing: '.12em', textTransform: 'uppercase', color: '#9A9080', textDecoration: 'none' }}>← Back to Scanner</a>
       </nav>
 
-      <div style={{ maxWidth: 860, margin: '0 auto', padding: '3rem 1.5rem' }}>
-
-        {/* Success/cancel messages */}
+      {/* Hero */}
+      <div style={{ textAlign: 'center', padding: '4rem 2rem 2rem' }}>
         {paymentSuccess && (
-          <div style={{ background: '#EEF4EE', border: '1px solid #C8D8C8', borderRadius: 2, padding: '1rem 1.25rem', marginBottom: '2rem', fontSize: 14, color: '#3A6A3A', fontWeight: 300 }}>
-            ✓ Payment successful — your searches have been added!{' '}
-            <a href="/scan" style={{ color: '#1A1612', fontWeight: 400 }}>Start scanning →</a>
+          <div style={{ display: 'inline-block', background: '#E8F5E9', color: '#2E7D32', fontSize: 13, padding: '8px 16px', borderRadius: 2, marginBottom: '1.5rem', letterSpacing: '.05em' }}>
+            Payment successful — credits added to your account.
           </div>
         )}
         {paymentCancelled && (
-          <div style={{ background: '#FDF0EE', border: '1px solid #E8C8C0', borderRadius: 2, padding: '1rem 1.25rem', marginBottom: '2rem', fontSize: 14, color: '#8A3A30', fontWeight: 300 }}>
-            Payment cancelled — no charges were made.
+          <div style={{ display: 'inline-block', background: '#FFF3E0', color: '#E65100', fontSize: 13, padding: '8px 16px', borderRadius: 2, marginBottom: '1.5rem', letterSpacing: '.05em' }}>
+            Payment cancelled.
           </div>
         )}
+        <p style={{ fontSize: 11, fontWeight: 500, letterSpacing: '.15em', textTransform: 'uppercase', color: '#9A9080', marginBottom: '1rem' }}>PRICING</p>
+        <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)', fontWeight: 300, color: '#1A1612', margin: '0 0 1rem', lineHeight: 1.1 }}>Get more searches.</h1>
+        <p style={{ fontSize: 14, color: '#9A9080', fontWeight: 300, letterSpacing: '.05em' }}>One-time payment. No subscription. Credits never expire.</p>
+      </div>
 
-        {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-          <p style={{ fontSize: 10, fontWeight: 300, letterSpacing: '.25em', textTransform: 'uppercase', color: '#9A9080', marginBottom: '0.5rem' }}>Pricing</p>
-          <h1 style={{ fontSize: 'clamp(28px,5vw,42px)', fontWeight: 200, letterSpacing: '-.02em', color: '#1A1612', lineHeight: 1.1, marginBottom: '0.75rem' }}>
-            Get more searches.
-          </h1>
-          <p style={{ fontSize: 14, fontWeight: 300, color: '#9A9080', lineHeight: 1.6 }}>
-            One-time payment. No subscription. Credits never expire.
-          </p>
-        </div>
-
-        {/* Packages */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: '2rem' }}>
-          {PACKAGES.map(pkg => (
-            <div key={pkg.name} style={{
-              background: '#fff',
-              border: pkg.highlight ? '1px solid #1A1612' : '1px solid #EDEAE4',
-              borderRadius: 2,
-              padding: '1.75rem 1.5rem',
-              position: 'relative',
-            }}>
-              {pkg.highlight && (
-                <div style={{ position: 'absolute', top: -1, left: '50%', transform: 'translateX(-50%)', background: '#1A1612', color: '#fff', fontSize: 9, fontWeight: 400, letterSpacing: '.15em', textTransform: 'uppercase', padding: '3px 12px' }}>
-                  Most popular
-                </div>
-              )}
-              <p style={{ fontSize: 10, fontWeight: 300, letterSpacing: '.2em', textTransform: 'uppercase', color: '#9A9080', marginBottom: '0.5rem', marginTop: pkg.highlight ? '0.5rem' : 0 }}>{pkg.name}</p>
-              <p style={{ fontSize: 36, fontWeight: 200, color: '#1A1612', letterSpacing: '-.02em', marginBottom: '0.25rem' }}>{pkg.price}</p>
-              <p style={{ fontSize: 13, fontWeight: 300, color: '#9A9080', marginBottom: '1.5rem' }}>{pkg.searches} searches · {pkg.perSearch} each</p>
-
-              <div style={{ borderTop: '1px solid #EDEAE4', paddingTop: '1.25rem', marginBottom: '1.5rem' }}>
-                {[
-                  `${pkg.searches} search credits`,
-                  'All EU platforms',
-                  'Never expires',
-                  'Local shop finder',
-                ].map(f => (
-                  <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                    <span style={{ fontSize: 12, color: '#5A7A5A' }}>✓</span>
-                    <span style={{ fontSize: 13, fontWeight: 300, color: '#1A1612' }}>{f}</span>
-                  </div>
-                ))}
+      {/* Cards */}
+      <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', padding: '2rem', flexWrap: 'wrap', maxWidth: 960, margin: '0 auto' }}>
+        {PACKAGES.map((pkg) => (
+          <div key={pkg.priceId} style={{
+            background: '#FFFFFF',
+            border: pkg.highlight ? '1.5px solid #1A1612' : '0.5px solid #E8E4DE',
+            borderRadius: 2,
+            padding: '2rem 1.75rem',
+            flex: '1 1 260px',
+            maxWidth: 300,
+            position: 'relative',
+          }}>
+            {pkg.highlight && (
+              <div style={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', background: '#1A1612', color: '#FAF8F5', fontSize: 10, fontWeight: 500, letterSpacing: '.12em', textTransform: 'uppercase', padding: '4px 14px' }}>
+                Most Popular
               </div>
-
-              <button
-                className={`pkg-btn${pkg.highlight ? ' highlight' : ''}`}
-                onClick={() => handleCheckout(pkg.priceId, pkg.name)}
-                disabled={loading === pkg.priceId}
-              >
-                {loading === pkg.priceId ? 'Redirecting…' : `Get ${pkg.name}`}
-              </button>
+            )}
+            <p style={{ fontSize: 11, fontWeight: 500, letterSpacing: '.15em', textTransform: 'uppercase', color: '#9A9080', marginBottom: '0.75rem' }}>{pkg.name}</p>
+            <p style={{ fontSize: 36, fontWeight: 300, color: '#1A1612', margin: '0 0 4px' }}>{pkg.price}</p>
+            <p style={{ fontSize: 12, color: '#9A9080', marginBottom: '1.5rem', letterSpacing: '.03em' }}>{pkg.searches} searches · {pkg.perSearch} each</p>
+            <div style={{ borderTop: '0.5px solid #E8E4DE', paddingTop: '1.25rem', marginBottom: '1.5rem' }}>
+              {[`${pkg.searches} search credits`, 'All EU platforms', 'Never expires', 'Local shop finder'].map((f) => (
+                <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <span style={{ color: '#1A1612', fontSize: 12 }}>✓</span>
+                  <span style={{ fontSize: 13, color: '#5A524A', fontWeight: 300 }}>{f}</span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-
-        {/* Footer note */}
-        <p style={{ textAlign: 'center', fontSize: 12, fontWeight: 300, color: '#9A9080', lineHeight: 1.6 }}>
-          Secure payment via Stripe · Your first 2 searches are free
-        </p>
+            <button
+              onClick={() => handleCheckout(pkg.priceId, pkg.name)}
+              disabled={loading === pkg.priceId}
+              style={{
+                width: '100%',
+                background: '#1A1612',
+                color: '#FAF8F5',
+                border: 'none',
+                padding: '12px',
+                fontSize: 11,
+                fontWeight: 500,
+                letterSpacing: '.12em',
+                textTransform: 'uppercase',
+                cursor: loading === pkg.priceId ? 'not-allowed' : 'pointer',
+                opacity: loading === pkg.priceId ? 0.6 : 1,
+                borderRadius: 2,
+                fontFamily: "'Outfit', sans-serif",
+              }}
+            >
+              {loading === pkg.priceId ? 'Loading...' : `Get ${pkg.name}`}
+            </button>
+          </div>
+        ))}
       </div>
     </div>
-  );
-}
-
-export default function PricingPage() {
-  return (
-    <Suspense fallback={<div style={{minHeight:'100vh',background:'#F5F0E8'}}/>}>
-      <PricingContent />
-    </Suspense>
   );
 }
