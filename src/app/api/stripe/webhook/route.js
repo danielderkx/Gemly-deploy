@@ -3,63 +3,62 @@ import { createClient } from '@supabase/supabase-js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// Use service role for webhook (no user session available)
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const PACKAGES = {
+  'price_1TYoLOIy2dxBbN1tDEDjrvAo': { name: 'Starter', credits: 10 },
+  'price_1TYoMIIy2dxBbN1tMsacEGz0': { name: 'Plus',    credits: 30 },
+  'price_1TY4ljIy2dxBbN1tUdUGl47a': { name: 'Pro',     credits: 100 },
+};
 
 export async function POST(request) {
   const body = await request.text();
-  const signature = request.headers.get('stripe-signature');
+  const sig = request.headers.get('stripe-signature');
 
   let event;
   try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET
-    );
-  } catch (error) {
-    console.error('Webhook signature failed:', error.message);
+    event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    console.error('Webhook signature failed:', err.message);
     return Response.json({ error: 'Invalid signature' }, { status: 400 });
   }
 
-  // Only handle successful payments
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object;
-    const userId = session.metadata?.user_id;
-    const creditsToAdd = parseInt(session.metadata?.credits || '0');
+    const { user_id, credits, price_id } = session.metadata;
+    const pkg = PACKAGES[price_id];
 
-    if (!userId || !creditsToAdd) {
-      console.error('Missing metadata:', session.metadata);
+    if (!user_id || !credits || !pkg) {
+      console.error('Missing metadata in session:', session.id);
       return Response.json({ error: 'Missing metadata' }, { status: 400 });
     }
 
-    // Get current credits
-    const { data: profile, error: fetchError } = await supabase
-      .from('profiles')
-      .select('credits')
-      .eq('id', userId)
-      .single();
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
 
-    if (fetchError) {
-      console.error('Failed to fetch profile:', fetchError);
-      return Response.json({ error: 'Profile not found' }, { status: 500 });
+    // Add credits to user profile
+    const { error: creditError } = await supabase.rpc('increment_credits', {
+      user_id_input: user_id,
+      amount: parseInt(credits),
+    });
+
+    if (creditError) {
+      console.error('Error adding credits:', creditError);
+      return Response.json({ error: 'Failed to add credits' }, { status: 500 });
     }
 
-    // Add credits
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ credits: (profile.credits || 0) + creditsToAdd })
-      .eq('id', userId);
+    // Log order
+    await supabase.from('orders').insert({
+      user_id,
+      stripe_session_id: session.id,
+      stripe_payment_intent: session.payment_intent,
+      package_name: pkg.name,
+      credits_added: parseInt(credits),
+      amount_eur: session.amount_total / 100,
+      status: 'completed',
+    });
 
-    if (updateError) {
-      console.error('Failed to update credits:', updateError);
-      return Response.json({ error: 'Update failed' }, { status: 500 });
-    }
-
-    console.log(`Added ${creditsToAdd} credits to user ${userId}`);
+    console.log(`Credits added: ${credits} for user ${user_id}`);
   }
 
   return Response.json({ received: true });
