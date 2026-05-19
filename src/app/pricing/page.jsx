@@ -76,19 +76,24 @@ function PricingContent() {
         <p style={{ fontSize: 14, color: '#9A9080', fontWeight: 300, letterSpacing: '.05em' }}>One-time payment. No subscription. Credits never expire.</p>
       </div>
 
-      <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', padding: '2rem', flexWrap: 'wrap', maxWidth: 960, margin: '0 auto' }}>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: '1rem',
+        maxWidth: 900,
+        margin: '0 auto',
+        padding: '2rem',
+      }}>
         {PACKAGES.map((pkg) => (
           <div key={pkg.priceId} style={{
             background: '#FFFFFF',
             border: pkg.highlight ? '1.5px solid #1A1612' : '0.5px solid #E8E4DE',
             borderRadius: 2,
             padding: '2rem 1.75rem',
-            flex: '1 1 260px',
-            maxWidth: 300,
             position: 'relative',
           }}>
             {pkg.highlight && (
-              <div style={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', background: '#1A1612', color: '#FAF8F5', fontSize: 10, fontWeight: 500, letterSpacing: '.12em', textTransform: 'uppercase', padding: '4px 14px' }}>
+              <div style={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', background: '#1A1612', color: '#FAF8F5', fontSize: 10, fontWeight: 500, letterSpacing: '.12em', textTransform: 'uppercase', padding: '4px 14px', whiteSpace: 'nowrap' }}>
                 Most Popular
               </div>
             )}
