@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 const PACKAGES = [
@@ -29,7 +29,7 @@ const PACKAGES = [
   },
 ];
 
-export default function PricingPage() {
+function PricingContent() {
   const [loading, setLoading] = useState(null);
   const searchParams = useSearchParams();
   const paymentSuccess = searchParams.get('payment') === 'success';
@@ -59,14 +59,7 @@ export default function PricingPage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#FAF8F5', fontFamily: "'Outfit', sans-serif" }}>
-      {/* Nav */}
-      <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem 2rem', borderBottom: '0.5px solid #E8E4DE' }}>
-        <a href="/" style={{ fontSize: 14, fontWeight: 500, letterSpacing: '.15em', textTransform: 'uppercase', color: '#1A1612', textDecoration: 'none' }}>GEMLY</a>
-        <a href="/scan" style={{ fontSize: 11, fontWeight: 400, letterSpacing: '.12em', textTransform: 'uppercase', color: '#9A9080', textDecoration: 'none' }}>← Back to Scanner</a>
-      </nav>
-
-      {/* Hero */}
+    <>
       <div style={{ textAlign: 'center', padding: '4rem 2rem 2rem' }}>
         {paymentSuccess && (
           <div style={{ display: 'inline-block', background: '#E8F5E9', color: '#2E7D32', fontSize: 13, padding: '8px 16px', borderRadius: 2, marginBottom: '1.5rem', letterSpacing: '.05em' }}>
@@ -83,7 +76,6 @@ export default function PricingPage() {
         <p style={{ fontSize: 14, color: '#9A9080', fontWeight: 300, letterSpacing: '.05em' }}>One-time payment. No subscription. Credits never expire.</p>
       </div>
 
-      {/* Cards */}
       <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', padding: '2rem', flexWrap: 'wrap', maxWidth: 960, margin: '0 auto' }}>
         {PACKAGES.map((pkg) => (
           <div key={pkg.priceId} style={{
@@ -135,6 +127,20 @@ export default function PricingPage() {
           </div>
         ))}
       </div>
+    </>
+  );
+}
+
+export default function PricingPage() {
+  return (
+    <div style={{ minHeight: '100vh', background: '#FAF8F5', fontFamily: "'Outfit', sans-serif" }}>
+      <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.25rem 2rem', borderBottom: '0.5px solid #E8E4DE' }}>
+        <a href="/" style={{ fontSize: 14, fontWeight: 500, letterSpacing: '.15em', textTransform: 'uppercase', color: '#1A1612', textDecoration: 'none' }}>GEMLY</a>
+        <a href="/scan" style={{ fontSize: 11, fontWeight: 400, letterSpacing: '.12em', textTransform: 'uppercase', color: '#9A9080', textDecoration: 'none' }}>← Back to Scanner</a>
+      </nav>
+      <Suspense fallback={null}>
+        <PricingContent />
+      </Suspense>
     </div>
   );
 }
