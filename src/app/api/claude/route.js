@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
-const PAID_MODELS = ['claude-sonnet-4-5'];
+const PAID_MODELS = ['claude-sonnet-4-5', 'claude-sonnet-4-6'];
 const CREDIT_COST = 1;
 
 export async function POST(request) {
