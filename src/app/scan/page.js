@@ -845,7 +845,7 @@ export default function ScanPage() {
                 </button>
               ))}
             </div>
-            <button className="btn-primary" disabled={!radius} onClick={handleSearch}>Find deals &amp; shops</button>
+            <button className="btn-primary" disabled={!radius || locLoading} onClick={handleSearch}>Find deals &amp; shops</button>
           </div>
         )}
 
@@ -874,9 +874,9 @@ export default function ScanPage() {
             <p style={{fontSize:13,fontWeight:300,color:"#9A9080",marginBottom:"2rem",lineHeight:1.6}}>You've used all your free searches.<br/>Pick a plan to keep finding deals.</p>
             <div style={{display:"flex",flexDirection:"column",gap:10,maxWidth:320,margin:"0 auto",marginBottom:"1.5rem"}}>
               {[
-                {name:"Starter",searches:10,price:"€4,99"},
-                {name:"Plus",searches:30,price:"€11,99"},
-                {name:"Pro",searches:100,price:"€29,99"},
+                {name:"Starter",searches:10,price:"€5,99"},
+                {name:"Plus",searches:30,price:"€12,99"},
+                {name:"Pro",searches:100,price:"€34,99"},
               ].map(p=>(
                 <div key={p.name} style={{background:"#F5F0E8",border:"1px solid #EDEAE4",borderRadius:2,padding:".85rem 1.1rem",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <div>
