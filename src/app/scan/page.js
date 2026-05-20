@@ -1,4 +1,4 @@
-'use client';
+'use client'; 
 import { useState, useRef, useEffect } from "react";
 import { createClient } from '../../lib/supabase';
 
@@ -325,7 +325,7 @@ export default function ScanPage() {
       const r = await fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
-          model:"claude-sonnet-4-5", max_tokens:400,
+          model:"claude-sonnet-4-6", max_tokens:400,
           messages:[{ role:"user", content:[
             { type:"image", source:{ type:"base64", media_type:mediaType, data:base64 } },
             { type:"text", text:'Identify this item. Reply ONLY with JSON: {"name":"Nike Air Max 90 White","searchQuery":"Nike Air Max 90 White","similarQuery":"white sneakers","needsSize":true,"cat":"shoes"}. cat: tops/bottoms/dresses/shoes/kids/watches/jewelry/null. needsSize true only for clothing/shoes. Be specific — include brand, model, colorway.' }
@@ -363,7 +363,7 @@ export default function ScanPage() {
       const r = await fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
-          model:"claude-sonnet-4-5", max_tokens:200,
+          model:"claude-sonnet-4-6", max_tokens:200,
           messages:[{ role:"user", content:'Fashion/luxury item: "' + name + '". Reply ONLY JSON: {"name":"exact item name","searchQuery":"best search term","similarQuery":"generic alternative","needsSize":true,"cat":"shoes"}. cat: tops/bottoms/dresses/shoes/kids/watches/jewelry/null. needsSize true for clothing/shoes. Make searchQuery specific with brand+model.' }]
         }),
       });
@@ -455,7 +455,7 @@ export default function ScanPage() {
       const listingData = await fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
-          model:"claude-sonnet-4-5", max_tokens:1000,
+          model:"claude-sonnet-4-6", max_tokens:1000,
           tools:[{ type:"web_search_20250305", name:"web_search", max_uses:3 }],
           messages:[{ role:"user", content: listingPrompt }]
         }),
@@ -485,7 +485,7 @@ export default function ScanPage() {
       const shopData = await fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
-          model:"claude-sonnet-4-5", max_tokens:800,
+          model:"claude-sonnet-4-6", max_tokens:800,
           tools:[{ type:"web_search_20250305", name:"web_search", max_uses:2 }],
           messages:[{ role:"user", content: shopsPrompt }]
         }),
@@ -526,7 +526,7 @@ export default function ScanPage() {
       const r = await fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
-          model:"claude-sonnet-4-5", max_tokens:1000,
+          model:"claude-sonnet-4-6", max_tokens:1000,
           tools:[{ type:"web_search_20250305", name:"web_search", max_uses:3 }],
           messages:[{ role:"user", content: prompt }]
         }),
