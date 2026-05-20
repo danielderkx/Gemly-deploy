@@ -254,9 +254,11 @@ export default function ScanPage() {
     });
   }, []);
 
+  // FIX 2: GPS first, IP fallback
   const detectLocation = async () => {
     setLocLoading(true);
     try {
+      // Try browser GPS first
       if (navigator.geolocation) {
         await new Promise((resolve) => {
           navigator.geolocation.getCurrentPosition(
@@ -267,18 +269,30 @@ export default function ScanPage() {
                 const d = await r.json();
                 const addr = d.address || {};
                 const countryCode = addr.country_code?.toUpperCase() || "";
-                setUserLocation({ country: addr.country || "", countryCode, city: addr.city || addr.town || addr.village || addr.municipality || "", continent: getContinent(null), continentCode: null });
+                setUserLocation({
+                  country: addr.country || "",
+                  countryCode,
+                  city: addr.city || addr.town || addr.village || addr.municipality || "",
+                  continent: getContinent(null),
+                  continentCode: null,
+                });
               } catch {}
               resolve();
             },
-            async () => { await detectByIP(); resolve(); },
+            async () => {
+              // GPS denied — fall back to IP
+              await detectByIP();
+              resolve();
+            },
             { timeout: 5000 }
           );
         });
       } else {
         await detectByIP();
       }
-    } catch { await detectByIP(); }
+    } catch {
+      await detectByIP();
+    }
     setLocLoading(false);
   };
 
@@ -310,27 +324,34 @@ export default function ScanPage() {
     try {
       const r = await fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ model:"claude-sonnet-4-5", max_tokens:400, messages:[{ role:"user", content:[
-          { type:"image", source:{ type:"base64", media_type:mediaType, data:base64 } },
-          { type:"text", text:'Identify this item. Reply ONLY with JSON: {"name":"Nike Air Max 90 White","searchQuery":"Nike Air Max 90 White","similarQuery":"white sneakers","needsSize":true,"cat":"shoes"}. cat: tops/bottoms/dresses/shoes/kids/watches/jewelry/null. needsSize true only for clothing/shoes. Be specific — include brand, model, colorway.' }
-        ]}] }),
+        body: JSON.stringify({
+          model:"claude-sonnet-4-5", max_tokens:400,
+          messages:[{ role:"user", content:[
+            { type:"image", source:{ type:"base64", media_type:mediaType, data:base64 } },
+            { type:"text", text:'Identify this item. Reply ONLY with JSON: {"name":"Nike Air Max 90 White","searchQuery":"Nike Air Max 90 White","similarQuery":"white sneakers","needsSize":true,"cat":"shoes"}. cat: tops/bottoms/dresses/shoes/kids/watches/jewelry/null. needsSize true only for clothing/shoes. Be specific — include brand, model, colorway.' }
+          ]}]
+        }),
       });
       const d = await r.json();
       if (d?.error?.type === "rate_limit_error") { setError("Too many requests — please wait 30 seconds."); setStep("upload"); return; }
       const raw = (d.content?.[0]?.text || "").trim();
       const parsed = parseJSON(raw);
-      let name = parsed?.name || ""; let sq = parsed?.searchQuery || ""; let simQ = parsed?.similarQuery || "";
+      let name = parsed?.name || "";
+      let sq = parsed?.searchQuery || "";
+      let simQ = parsed?.similarQuery || "";
       if (!name) { const m = raw.match(/"name"\s*:\s*"([^"]+)"/); name = m?m[1]:""; }
       if (!sq)   { const m = raw.match(/"searchQuery"\s*:\s*"([^"]+)"/); sq = m?m[1]:""; }
       if (!simQ) { const m = raw.match(/"similarQuery"\s*:\s*"([^"]+)"/); simQ = m?m[1]:""; }
       if (!name && raw.length<80 && !raw.includes("{")) name = raw;
       if (!name) name = "Unidentified item";
-      if (!sq) sq = name; if (!simQ) simQ = sq.split(" ").slice(1).join(" ") || sq;
+      if (!sq) sq = name;
+      if (!simQ) simQ = sq.split(" ").slice(1).join(" ") || sq;
       setIdentifiedItem(name); setSearchQuery(sq); setSimilarQuery(simQ);
       setSizeRelevant(parsed?.needsSize === true);
       const cat = parsed?.cat || null;
       if (cat) { setItemCategory(cat); if (SIZE_CATS[cat]) setSizeCat(cat); }
-      setStep("match_type"); fetchPriceEst(name);
+      setStep("match_type");
+      fetchPriceEst(name);
     } catch { setError("Could not identify item. Try again or use text search."); setStep("upload"); }
   };
 
@@ -341,21 +362,28 @@ export default function ScanPage() {
     try {
       const r = await fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ model:"claude-sonnet-4-5", max_tokens:200, messages:[{ role:"user", content:'Fashion/luxury item: "' + name + '". Reply ONLY JSON: {"name":"exact item name","searchQuery":"best search term","similarQuery":"generic alternative","needsSize":true,"cat":"shoes"}. cat: tops/bottoms/dresses/shoes/kids/watches/jewelry/null. needsSize true for clothing/shoes. Make searchQuery specific with brand+model.' }] }),
+        body: JSON.stringify({
+          model:"claude-sonnet-4-5", max_tokens:200,
+          messages:[{ role:"user", content:'Fashion/luxury item: "' + name + '". Reply ONLY JSON: {"name":"exact item name","searchQuery":"best search term","similarQuery":"generic alternative","needsSize":true,"cat":"shoes"}. cat: tops/bottoms/dresses/shoes/kids/watches/jewelry/null. needsSize true for clothing/shoes. Make searchQuery specific with brand+model.' }]
+        }),
       });
       const d = await r.json();
       if (d?.error?.type === "rate_limit_error") { setError("Too many requests. Wait 30 seconds."); setStep("upload"); return; }
       const raw = (d.content?.[0]?.text || "").trim();
       const parsed = parseJSON(raw);
-      const finalName = parsed?.name || name; const sq = parsed?.searchQuery || name; const simQ = parsed?.similarQuery || name;
+      const finalName = parsed?.name || name;
+      const sq = parsed?.searchQuery || name;
+      const simQ = parsed?.similarQuery || name;
       setIdentifiedItem(finalName); setSearchQuery(sq); setSimilarQuery(simQ);
       setSizeRelevant(parsed?.needsSize === true);
       const cat = parsed?.cat || null;
       if (cat) { setItemCategory(cat); if (SIZE_CATS[cat]) setSizeCat(cat); }
-      setStep("match_type"); fetchPriceEst(finalName);
+      setStep("match_type");
+      fetchPriceEst(finalName);
     } catch {
       const words = name.split(" ");
-      setIdentifiedItem(name); setSearchQuery(name); setSimilarQuery(words.length>1?words.slice(1).join(" "):name);
+      setIdentifiedItem(name); setSearchQuery(name);
+      setSimilarQuery(words.length>1 ? words.slice(1).join(" ") : name);
       setSizeRelevant(false); setItemCategory(null); setSizeCat(null);
       setStep("match_type"); fetchPriceEst(name);
     }
@@ -366,7 +394,10 @@ export default function ScanPage() {
     try {
       const r = await fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ model:"claude-haiku-4-5", max_tokens:150, messages:[{ role:"user", content:'Estimate second-hand resale price for: "' + name + '". Reply ONLY JSON: {"min":50,"max":120,"rarity":"common","tip":"short tip"}. rarity: common/uncommon/rare/very_rare.' }] }),
+        body: JSON.stringify({
+          model:"claude-haiku-4-5", max_tokens:150,
+          messages:[{ role:"user", content:'Estimate second-hand resale price for: "' + name + '". Reply ONLY JSON: {"min":50,"max":120,"rarity":"common","tip":"short tip"}. rarity: common/uncommon/rare/very_rare.' }]
+        }),
       });
       const d = await r.json();
       const p = parseJSON((d.content||[]).filter(b=>b.type==="text").map(b=>b.text).join(""));
@@ -408,6 +439,7 @@ export default function ScanPage() {
       'Reply ONLY with this JSON (no extra text):\n' +
       '{"listings":[{"title":"...","price":"' + currency + 'XX","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
 
+    // FIX 3: Web search for shops so they actually exist
     const shopsPrompt =
       'Search for real physical ' + shopType + ' in ' + shopCity + ' that carry items like: "' + identifiedItem + '".\n' +
       'Search Google for: ' + shopType + ' ' + shopCity + '\n' +
@@ -420,11 +452,22 @@ export default function ScanPage() {
     try {
       const listingData = await fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ model:"claude-sonnet-4-5", max_tokens:1000, is_listing_search: true, tools:[{ type:"web_search_20250305", name:"web_search", max_uses:3 }], messages:[{ role:"user", content: listingPrompt }] }),
+        body: JSON.stringify({
+          model:"claude-sonnet-4-5", max_tokens:1000,
+          tools:[{ type:"web_search_20250305", name:"web_search", max_uses:3 }],
+          messages:[{ role:"user", content: listingPrompt }]
+        }),
       }).then(r=>r.json());
-      if (listingData?.error?.type === "rate_limit_error") { setError("Too many requests — please wait 30 seconds and try again."); setStep("location"); return; }
-      if (listingData?.error === "no_credits") { setStep("no_credits"); return; }
-      if (listingData?._credits_remaining !== undefined) setCredits(listingData._credits_remaining);
+      if (listingData?.error?.type === "rate_limit_error") {
+        setError("Too many requests — please wait 30 seconds and try again.");
+        setStep("location"); return;
+      }
+      if (listingData?.error === "no_credits") {
+        setStep("no_credits"); return;
+      }
+      if (listingData?._credits_remaining !== undefined) {
+        setCredits(listingData._credits_remaining);
+      }
       const txt = (listingData.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
       const p = parseJSON(txt);
       if (p?.listings?.length) foundListings = p.listings.slice(0,3);
@@ -435,10 +478,15 @@ export default function ScanPage() {
     if (foundListings.length > 0) saveSearch(identifiedItem);
     setStep("results");
 
+    // FIX 3: Use sonnet + web_search for shops
     try {
       const shopData = await fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ model:"claude-sonnet-4-5", max_tokens:800, tools:[{ type:"web_search_20250305", name:"web_search", max_uses:2 }], messages:[{ role:"user", content: shopsPrompt }] }),
+        body: JSON.stringify({
+          model:"claude-sonnet-4-5", max_tokens:800,
+          tools:[{ type:"web_search_20250305", name:"web_search", max_uses:2 }],
+          messages:[{ role:"user", content: shopsPrompt }]
+        }),
       }).then(r=>r.json());
       const txt = (shopData.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
       const p = parseJSON(txt);
@@ -467,7 +515,7 @@ export default function ScanPage() {
       'FILTERS: ' + (filters || 'none') + '\n' +
       'LOCATION: ' + locText + '\n\n' +
       'ALREADY SHOWN — do NOT repeat these URLs:\n' + alreadyShown + '\n\n' +
-      'Find 3 DIFFERENT listings from different sellers or listings.\n' +
+      'Find 3 DIFFERENT listings from different sellers or platforms.\n' +
       'RULES: Real active product pages only, real prices, exact URLs.\n\n' +
       'Reply ONLY JSON:\n' +
       '{"listings":[{"title":"...","price":"' + currency + 'XX","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
@@ -475,11 +523,13 @@ export default function ScanPage() {
     try {
       const r = await fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ model:"claude-sonnet-4-5", max_tokens:1000, is_listing_search: true, tools:[{ type:"web_search_20250305", name:"web_search", max_uses:3 }], messages:[{ role:"user", content: prompt }] }),
+        body: JSON.stringify({
+          model:"claude-sonnet-4-5", max_tokens:1000,
+          tools:[{ type:"web_search_20250305", name:"web_search", max_uses:3 }],
+          messages:[{ role:"user", content: prompt }]
+        }),
       });
       const data = await r.json();
-      if (data?.error === "no_credits") { setStep("no_credits"); setLoadingMore(false); return; }
-      if (data?._credits_remaining !== undefined) setCredits(data._credits_remaining);
       const txt = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
       const p = parseJSON(txt);
       if (p?.listings?.length) setListings(sortByPrice(p.listings.slice(0,3)));
@@ -554,6 +604,7 @@ export default function ScanPage() {
           <div style={{display:'flex',gap:'1.5rem',alignItems:'center'}}>
             <a href="/" className="app-nav-link">← Home</a>
             {credits !== null && <span style={{fontSize:10,fontWeight:300,letterSpacing:'.15em',textTransform:'uppercase',color:'#9A9080'}}>{credits} left</span>}
+            {/* FIX 1: Link naar /account pagina */}
             <a href="/account" className="app-nav-link">Account</a>
           </div>
         </nav>
@@ -592,7 +643,7 @@ export default function ScanPage() {
                   onDragLeave={()=>setDragOver(false)}
                   onDrop={e=>{e.preventDefault();setDragOver(false);handleFile(e.dataTransfer.files[0]);}}>
                   <div className="drop-icon">
-                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#9A9080" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 16 0z"/></svg>
+                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#9A9080" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                   </div>
                   <p style={{fontSize:14,fontWeight:400,margin:"0 0 4px",color:"#1A1612"}}>Drop your photo here</p>
                   <p style={{fontSize:12,color:"#9A9080",margin:0,fontWeight:300}}>or tap to browse your gallery</p>
@@ -620,10 +671,14 @@ export default function ScanPage() {
 
         {step==="identifying"&&(
           <div className="slide-in" style={{textAlign:"center",paddingTop:"2rem"}}>
-            {imageData?(<div className="scan-wrap"><div className="scan-pulse"/><div className="scan-pulse" style={{animationDelay:"0.6s"}}/><img src={imageData} alt="" style={{width:100,height:100,objectFit:"cover",borderRadius:4,border:"1px solid #EDEAE4",display:"block",position:"relative",zIndex:1}}/></div>)
-              :<div style={{width:64,height:64,background:"#F5F0E8",borderRadius:2,margin:"0 auto 1.5rem",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26}}>🔍</div>}
+            {imageData?(
+              <div className="scan-wrap">
+                <div className="scan-pulse"/><div className="scan-pulse" style={{animationDelay:"0.6s"}}/>
+                <img src={imageData} alt="" style={{width:100,height:100,objectFit:"cover",borderRadius:4,border:"1px solid #EDEAE4",display:"block",position:"relative",zIndex:1}}/>
+              </div>
+            ):<div style={{width:64,height:64,background:"#F5F0E8",borderRadius:2,margin:"0 auto 1.5rem",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26}}>🔍</div>}
             <p style={{color:"#1A1612",fontSize:12,letterSpacing:".14em",textTransform:"uppercase",fontWeight:400,margin:"0 0 5px"}}>Identifying your item</p>
-            <p style={{color:"#9A9080",fontSize:12,margin:0,fontWeight:300}}>{imageData?"AI is reading the image…":"AI is analysing your search…"}</p>
+            <p style={{color:"#9A9080",fontSize:12,margin:0,fontWeight:300}}>{imageData ? "AI is reading the image…" : "AI is analysing your search…"}</p>
           </div>
         )}
 
@@ -657,7 +712,12 @@ export default function ScanPage() {
             <Back to="match_type"/>
             <span className="lbl">Who is it for?</span>
             <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:"1.25rem"}}>
-              {[{val:"women",label:"Women",icon:"♀"},{val:"men",label:"Men",icon:"♂"},{val:"unisex",label:"Unisex",icon:"⊕"},{val:"skip",label:"Skip this step",icon:"→"}].map(({val,label,icon})=>(
+              {[
+                {val:"women",label:"Women",icon:"♀"},
+                {val:"men",label:"Men",icon:"♂"},
+                {val:"unisex",label:"Unisex",icon:"⊕"},
+                {val:"skip",label:"Skip this step",icon:"→"},
+              ].map(({val,label,icon})=>(
                 <button key={val} className={"choice-card "+(gender===val?"selected":"")} onClick={()=>setGender(val)}>
                   <div style={{display:"flex",alignItems:"center",gap:12}}>
                     <span style={{fontSize:18,flexShrink:0,opacity:.7}}>{icon}</span>
@@ -811,9 +871,13 @@ export default function ScanPage() {
             <div style={{fontSize:48,marginBottom:"1rem"}}>💎</div>
             <p style={{fontSize:10,fontWeight:300,letterSpacing:".25em",textTransform:"uppercase",color:"#9A9080",marginBottom:".5rem"}}>Out of searches</p>
             <h2 style={{fontSize:26,fontWeight:200,color:"#1A1612",marginBottom:".75rem",letterSpacing:"-.01em"}}>Get more searches</h2>
-            <p style={{fontSize:13,fontWeight:300,color:"#9A9080",marginBottom:"2rem",lineHeight:1.6}}>You've used all your searches.<br/>Pick a plan to keep finding deals.</p>
+            <p style={{fontSize:13,fontWeight:300,color:"#9A9080",marginBottom:"2rem",lineHeight:1.6}}>You've used all your free searches.<br/>Pick a plan to keep finding deals.</p>
             <div style={{display:"flex",flexDirection:"column",gap:10,maxWidth:320,margin:"0 auto",marginBottom:"1.5rem"}}>
-              {[{name:"Starter",searches:10,price:"€5,99"},{name:"Plus",searches:30,price:"€12,99"},{name:"Pro",searches:100,price:"€34,99"}].map(p=>(
+              {[
+                {name:"Starter",searches:10,price:"€4,99"},
+                {name:"Plus",searches:30,price:"€11,99"},
+                {name:"Pro",searches:100,price:"€29,99"},
+              ].map(p=>(
                 <div key={p.name} style={{background:"#F5F0E8",border:"1px solid #EDEAE4",borderRadius:2,padding:".85rem 1.1rem",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <div>
                     <div style={{fontSize:13,fontWeight:400,color:"#1A1612"}}>{p.name}</div>
