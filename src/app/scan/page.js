@@ -267,7 +267,7 @@ export default function ScanPage() {
                 const { latitude, longitude } = pos.coords;
                 const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=en`);
                 const d = await r.json();
-                const addr = d.address || {};
+                const addr = d.address || {}; 
                 const countryCode = addr.country_code?.toUpperCase() || "";
                 setUserLocation({
                   country: addr.country || "",
@@ -438,6 +438,7 @@ export default function ScanPage() {
 '   Example of GOOD URL: https://www.vinted.nl/items/1234567-nike-air-max\n' +
 '   Example of BAD URL: https://www.vinted.nl/catalog?search_text=nike+air+max\n' +
       '4. Each listing must have a real price (e.g. "€89") — not "N/A"\n\n' +
+      '5. Prefer listings from platforms with real-time inventory like eBay, Vinted, and Vestiaire Collective over Grailed — Grailed listings are often sold out\n\n' +
       'Reply ONLY with this JSON (no extra text):\n' +
       '{"listings":[{"title":"...","price":"' + currency + 'XX","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
 
