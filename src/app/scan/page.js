@@ -243,7 +243,6 @@ export default function ScanPage() {
   const [gender, setGender] = useState(null);
   const [credits, setCredits] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [shownUrls, setShownUrls] = useState([]);
   const fileRef = useRef();
   const camRef = useRef();
 
@@ -382,7 +381,7 @@ export default function ScanPage() {
 
   const handleSearch = async () => {
     setStep("searching"); setSearchPhase(1); setError("");
-    setListings([]); setShopResults([]); setShownUrls([]);
+    setListings([]); setShopResults([]);
     const locText = !userLocation ? "worldwide" : radius==="country" ? userLocation.country : radius==="continent" ? userLocation.continent : "worldwide";
     const shopCity = userLocation?.city ? userLocation.city + ", " + userLocation.country : userLocation?.country || "your area";
     const condText = condition==="new" ? "brand new" : condition==="used" ? "second-hand/pre-owned" : "new or used";
@@ -400,18 +399,19 @@ export default function ScanPage() {
       'Search on these platforms: ' + platforms + '\n' +
       newItemInstruction +
       'Filters: ' + filters + '\n' +
-      'LOCATION: Listings must be available in or ship to ' + locText + '.\n\n' +
+      'LOCATION: Listings must be available in or ship to ' + locText + '. Only return results from sellers or platforms operating in ' + locText + '.\n\n' +
       'CRITICAL RULES:\n' +
       '1. ONLY return real, active product listing pages — never return homepage URLs, category pages, or search result pages\n' +
-      '2. NEVER return a listing with title like "Unable to find", "N/A" — if you cannot find 3 results, relax size filter first, then price, then location\n' +
+      '2. NEVER return a listing with title like "Unable to find", "N/A", or any explanation — if you cannot find 3 results, relax size filter first, then price filter, then location\n' +
       '3. Copy the exact URL of each individual listing from your search results\n' +
       '4. Each listing must have a real price (e.g. "€89") — not "N/A"\n\n' +
-      'Reply ONLY with this JSON:\n' +
+      'Reply ONLY with this JSON (no extra text):\n' +
       '{"listings":[{"title":"...","price":"' + currency + 'XX","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
 
     const shopsPrompt =
       'Search for real physical ' + shopType + ' in ' + shopCity + ' that carry items like: "' + identifiedItem + '".\n' +
-      'CRITICAL: Only include stores that actually exist and are physically located in ' + shopCity + '.\n' +
+      'Search Google for: ' + shopType + ' ' + shopCity + '\n' +
+      'CRITICAL: Only include stores that actually exist and are physically located in ' + shopCity + '. Verify each store exists before including it.\n' +
       'Reply ONLY JSON: {"shops":[{"name":"...","description":"1 sentence","address":"street, city","url":"https://...","tip":"why they carry this"},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."},{"name":"...","description":"...","address":"...","url":"https://...","tip":"..."}]}';
 
     let foundListings = [];
@@ -422,7 +422,7 @@ export default function ScanPage() {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({ model:"claude-sonnet-4-5", max_tokens:1000, is_listing_search: true, tools:[{ type:"web_search_20250305", name:"web_search", max_uses:3 }], messages:[{ role:"user", content: listingPrompt }] }),
       }).then(r=>r.json());
-      if (listingData?.error?.type === "rate_limit_error") { setError("Too many requests — please wait 30 seconds."); setStep("location"); return; }
+      if (listingData?.error?.type === "rate_limit_error") { setError("Too many requests — please wait 30 seconds and try again."); setStep("location"); return; }
       if (listingData?.error === "no_credits") { setStep("no_credits"); return; }
       if (listingData?._credits_remaining !== undefined) setCredits(listingData._credits_remaining);
       const txt = (listingData.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
@@ -431,8 +431,6 @@ export default function ScanPage() {
     } catch {}
 
     setSearchPhase(3);
-    const newUrls = foundListings.map(l => l.url).filter(Boolean);
-    setShownUrls(newUrls);
     setListings(sortByPrice(foundListings));
     if (foundListings.length > 0) saveSearch(identifiedItem);
     setStep("results");
@@ -460,19 +458,17 @@ export default function ScanPage() {
     const genderText = gender && gender !== 'skip' ? gender : '';
     const filters = [condText, qualText, sizeText, genderText, priceText].filter(Boolean).join(", ");
     const newItemInstruction = condition === "new" ? 'Priority: search official brand websites and established retail webshops first.\n' : '';
-    const bannedUrls = shownUrls.join("\n");
+    const alreadyShown = listings.map(l => l.url).filter(Boolean).join(", ");
 
     const prompt =
-      'Search the web for listings of: "' + activeQ + '"\n\n' +
+      'You are a shopping assistant. Search for MORE listings of: "' + activeQ + '"\n\n' +
       'PLATFORMS: ' + platforms + '\n\n' +
       newItemInstruction +
       'FILTERS: ' + (filters || 'none') + '\n' +
       'LOCATION: ' + locText + '\n\n' +
-      'BANNED URLS — these have already been shown, do NOT return them under any circumstances:\n' + bannedUrls + '\n\n' +
-      'You MUST return 3 listings with URLs that are NOT in the banned list above.\n' +
-      'Each result must be a different individual product listing (different seller, different listing ID).\n' +
-      'Search deeper in the results — skip page 1 if needed to find fresh listings.\n' +
-      'RULES: Real active product pages only, real prices, exact listing URLs.\n\n' +
+      'ALREADY SHOWN — do NOT repeat these URLs:\n' + alreadyShown + '\n\n' +
+      'Find 3 DIFFERENT listings from different sellers or listings.\n' +
+      'RULES: Real active product pages only, real prices, exact URLs.\n\n' +
       'Reply ONLY JSON:\n' +
       '{"listings":[{"title":"...","price":"' + currency + 'XX","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
 
@@ -486,12 +482,7 @@ export default function ScanPage() {
       if (data?._credits_remaining !== undefined) setCredits(data._credits_remaining);
       const txt = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
       const p = parseJSON(txt);
-      if (p?.listings?.length) {
-        const newListings = p.listings.slice(0,3);
-        const newUrls = newListings.map(l => l.url).filter(Boolean);
-        setShownUrls(prev => [...prev, ...newUrls]);
-        setListings(sortByPrice(newListings));
-      }
+      if (p?.listings?.length) setListings(sortByPrice(p.listings.slice(0,3)));
     } catch {}
     setLoadingMore(false);
   };
@@ -501,7 +492,7 @@ export default function ScanPage() {
     setIdentifiedItem(""); setSearchQuery(""); setSimilarQuery(""); setItemCategory(null); setSizeRelevant(false);
     setMatchType(null); setGender(null); setSizeCat(null); setSelectedSize(null); setCustomSize("");
     setCondition(null); setQuality(null); setPriceMin(""); setPriceMax(""); setRadius(null);
-    setListings([]); setShopResults([]); setError(""); setShownUrls([]);
+    setListings([]); setShopResults([]); setError("");
     setPriceEst(null); setPriceEstLoading(false); setSearchPhase(0);
   };
 
@@ -601,7 +592,7 @@ export default function ScanPage() {
                   onDragLeave={()=>setDragOver(false)}
                   onDrop={e=>{e.preventDefault();setDragOver(false);handleFile(e.dataTransfer.files[0]);}}>
                   <div className="drop-icon">
-                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#9A9080" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#9A9080" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 16 0z"/></svg>
                   </div>
                   <p style={{fontSize:14,fontWeight:400,margin:"0 0 4px",color:"#1A1612"}}>Drop your photo here</p>
                   <p style={{fontSize:12,color:"#9A9080",margin:0,fontWeight:300}}>or tap to browse your gallery</p>
@@ -632,7 +623,7 @@ export default function ScanPage() {
             {imageData?(<div className="scan-wrap"><div className="scan-pulse"/><div className="scan-pulse" style={{animationDelay:"0.6s"}}/><img src={imageData} alt="" style={{width:100,height:100,objectFit:"cover",borderRadius:4,border:"1px solid #EDEAE4",display:"block",position:"relative",zIndex:1}}/></div>)
               :<div style={{width:64,height:64,background:"#F5F0E8",borderRadius:2,margin:"0 auto 1.5rem",display:"flex",alignItems:"center",justifyContent:"center",fontSize:26}}>🔍</div>}
             <p style={{color:"#1A1612",fontSize:12,letterSpacing:".14em",textTransform:"uppercase",fontWeight:400,margin:"0 0 5px"}}>Identifying your item</p>
-            <p style={{color:"#9A9080",fontSize:12,margin:0,fontWeight:300}}>{imageData ? "AI is reading the image…" : "AI is analysing your search…"}</p>
+            <p style={{color:"#9A9080",fontSize:12,margin:0,fontWeight:300}}>{imageData?"AI is reading the image…":"AI is analysing your search…"}</p>
           </div>
         )}
 
