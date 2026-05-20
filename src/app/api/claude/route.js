@@ -1,16 +1,17 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
-// Only these models trigger a credit deduction — the expensive web search calls
 const PAID_MODELS = ['claude-sonnet-4-5'];
-const CREDIT_COST = 1; // 1 credit per search
+const CREDIT_COST = 1;
 
 export async function POST(request) {
   try {
     const body = await request.json();
 
-    // ── Credit check (only for paid/sonnet calls with web search) ──────────
-    const isPaidCall = PAID_MODELS.includes(body.model) && body.tools?.length > 0;
+    // Strip custom fields before sending to Anthropic
+    const { is_listing_search, ...anthropicBody } = body;
+
+    const isPaidCall = PAID_MODELS.includes(anthropicBody.model) && anthropicBody.tools?.length > 0;
 
     if (isPaidCall) {
       const cookieStore = await cookies();
@@ -20,13 +21,11 @@ export async function POST(request) {
         { cookies: { getAll: () => cookieStore.getAll() } }
       );
 
-      // Get current user
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) {
         return Response.json({ error: 'not_authenticated', message: 'Please log in to search.' }, { status: 401 });
       }
 
-      // Get credits
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('credits')
@@ -38,16 +37,11 @@ export async function POST(request) {
       }
 
       if (profile.credits < CREDIT_COST) {
-        return Response.json({
-          error: 'no_credits',
-          message: 'You have no searches left.',
-          credits: 0
-        }, { status: 402 });
+        return Response.json({ error: 'no_credits', message: 'You have no searches left.', credits: 0 }, { status: 402 });
       }
 
-      // ── Run the actual API call ──────────────────────────────────────────
-      if (!body.system && body.messages?.length > 0) {
-        body.system = [
+      if (!anthropicBody.system && anthropicBody.messages?.length > 0) {
+        anthropicBody.system = [
           {
             type: "text",
             text: "You are Gemly, an expert AI shopping assistant specializing in fashion, sneakers, luxury goods, and vintage items. You help users find the best deals on secondhand and new items across platforms like eBay, Vinted, Grailed, StockX, Vestiaire Collective, Depop, and Marktplaats. Always return valid JSON only, no markdown, no explanation. Only return real URLs from search results.",
@@ -64,12 +58,11 @@ export async function POST(request) {
           "anthropic-version": "2023-06-01",
           "anthropic-beta": "web-search-2025-03-05,prompt-caching-2024-07-31",
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify(anthropicBody),
       });
 
       const data = await response.json();
 
-      // ── Deduct credit only if call succeeded ─────────────────────────────
       if (response.ok && !data.error) {
         await supabase
           .from('profiles')
@@ -79,16 +72,15 @@ export async function POST(request) {
           })
           .eq('id', user.id);
 
-        // Return with credits remaining so scanner can show it
         data._credits_remaining = profile.credits - CREDIT_COST;
       }
 
       return Response.json(data, { status: response.status });
     }
 
-    // ── Free calls (identify, price estimate, shops) — no credit deduction ─
-    if (!body.system && body.messages?.length > 0) {
-      body.system = [
+    // Free calls
+    if (!anthropicBody.system && anthropicBody.messages?.length > 0) {
+      anthropicBody.system = [
         {
           type: "text",
           text: "You are Gemly, an expert AI shopping assistant specializing in fashion, sneakers, luxury goods, and vintage items. You help users find the best deals on secondhand and new items across platforms like eBay, Vinted, Grailed, StockX, Vestiaire Collective, Depop, and Marktplaats. Always return valid JSON only, no markdown, no explanation. Only return real URLs from search results.",
@@ -105,7 +97,7 @@ export async function POST(request) {
         "anthropic-version": "2023-06-01",
         "anthropic-beta": "web-search-2025-03-05,prompt-caching-2024-07-31",
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(anthropicBody),
     });
 
     const data = await response.json();
