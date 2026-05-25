@@ -941,7 +941,7 @@ export default function ScanPage() {
               style={{width:"100%",background:"none",border:"1px solid #EDEAE4",borderRadius:2,padding:".75rem",fontSize:11,fontFamily:"'Outfit',sans-serif",fontWeight:400,color:loadingMore?"#C8C0B4":"#9A9080",cursor:loadingMore?"not-allowed":"pointer",letterSpacing:".14em",textTransform:"uppercase",marginBottom:".85rem",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}
               onMouseEnter={e=>{if(!loadingMore){e.currentTarget.style.borderColor="#1A1612";e.currentTarget.style.color="#1A1612";}}}
               onMouseLeave={e=>{e.currentTarget.style.borderColor="#EDEAE4";e.currentTarget.style.color=loadingMore?"#C8C0B4":"#9A9080";}}>
-              {loadingMore?<><div style={{width:11,height:11,border:"1px solid #EDEAE4",borderTopColor:"#1A1612",borderRadius:"50%",animation:"spin 1s linear infinite"}}/> Searching…</>:<>↻ Show 3 new results &nbsp;·&nbsp; 1 token</>}
+              {loadingMore?<><div style={{width:11,height:11,border:"1px solid #EDEAE4",borderTopColor:"#1A1612",borderRadius:"50%",animation:"spin 1s linear infinite"}}/> Searching…</>:<>↻ Show 3 new results · 1 token</>}
             </button>
             <div className="divgem"><span className="gem">{condition==="new"?"🏪":"💎"}</span></div>
             <div className="sec-title"><span>{condition==="new"?"Physical stores":"Hidden gem shops"}</span></div>
