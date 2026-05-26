@@ -134,4 +134,139 @@ export default function AdminPage() {
           {[
             { label: 'Total users', value: users.length, sub: 'registered' },
             { label: 'Active', value: users.filter(u => u.total_searches > 0).length, sub: '≥1 search done' },
-            { label: 'Via referral', value: users.filter(u => u.referred_by).length, s
+            { label: 'Via referral', value: users.filter(u => u.referred_by).length, sub: 'referred signups' },
+            { label: 'Total searches', value: totalSearches, sub: 'all time' },
+          ].map(({ label, value, sub }) => (
+            <div key={label} style={{ background: '#fff', border: '1px solid #EDEAE4', borderRadius: 2, padding: '1rem 1.25rem' }}>
+              <div style={{ fontSize: 10, fontWeight: 400, letterSpacing: '.16em', textTransform: 'uppercase', color: '#9A9080', marginBottom: 6 }}>{label}</div>
+              <div style={{ fontSize: 26, fontWeight: 200, color: '#1A1612', lineHeight: 1, marginBottom: 4 }}>{value}</div>
+              <div style={{ fontSize: 11, color: '#C8C0B4', fontWeight: 300 }}>{sub}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ background: '#fff', border: '1px solid #EDEAE4', borderRadius: 2, padding: '1.25rem 1.5rem', marginBottom: '1.5rem' }}>
+          <div style={{ fontSize: 10, fontWeight: 400, letterSpacing: '.16em', textTransform: 'uppercase', color: '#9A9080', marginBottom: '1rem' }}>Users by country</div>
+          {countries.length === 0 ? (
+            <p style={{ fontSize: 13, color: '#C8C0B4', fontWeight: 300 }}>No data yet.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {countries.map(({ name, users: count, searches }) => (
+                <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 120, fontSize: 13, fontWeight: 300, color: '#1A1612', flexShrink: 0 }}>{name}</div>
+                  <div style={{ flex: 1, height: 6, background: '#F5F0E8', borderRadius: 1, overflow: 'hidden' }}>
+                    <div style={{ width: `${(count / maxUsers) * 100}%`, height: '100%', background: '#1A1612', borderRadius: 1, transition: 'width .4s' }} />
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: '#1A1612', width: 24, textAlign: 'right', flexShrink: 0 }}>{count}</div>
+                  <div style={{ fontSize: 11, color: '#C8C0B4', fontWeight: 300, width: 80, flexShrink: 0 }}>{searches} searches</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', gap: 6, marginBottom: '1rem' }}>
+          {['users', 'orders'].map(t => (
+            <button key={t} onClick={() => setTab(t)} style={{ background: tab === t ? '#1A1612' : '#fff', color: tab === t ? '#fff' : '#9A9080', border: '1px solid', borderColor: tab === t ? '#1A1612' : '#EDEAE4', borderRadius: 2, padding: '7px 18px', fontSize: 11, fontFamily: "'Outfit',sans-serif", fontWeight: 400, letterSpacing: '.14em', textTransform: 'uppercase', cursor: 'pointer' }}>
+              {t === 'users' ? `Users (${users.length})` : `Orders (${orders.length})`}
+            </button>
+          ))}
+        </div>
+
+        {loading ? (
+          <div style={{ background: '#fff', border: '1px solid #EDEAE4', borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '3rem' }}>
+            <div style={{ width: 24, height: 24, border: '1.5px solid #EDEAE4', borderTopColor: '#1A1612', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+          </div>
+        ) : tab === 'users' ? (
+          <div style={{ background: '#fff', border: '1px solid #EDEAE4', borderRadius: 2, overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid #EDEAE4', background: '#FAFAF8' }}>
+                  <th className="th" onClick={() => toggleSort('full_name')}>Name <Arrow col="full_name" /></th>
+                  <th className="th">Email</th>
+                  <th className="th">Country</th>
+                  <th className="th" onClick={() => toggleSort('total_searches')}>Searches <Arrow col="total_searches" /></th>
+                  <th className="th" onClick={() => toggleSort('credits')}>Credits <Arrow col="credits" /></th>
+                  <th className="th">Referral</th>
+                  <th className="th" onClick={() => toggleSort('created_at')}>Joined <Arrow col="created_at" /></th>
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map(u => (
+                  <tr key={u.id} className="tr">
+                    <td className="td" style={{ fontWeight: 400 }}>{u.full_name || <span style={{ color: '#C8C0B4' }}>—</span>}</td>
+                    <td className="td" style={{ color: '#9A9080', fontSize: 12 }}>{u.email || <span style={{ color: '#C8C0B4' }}>—</span>}</td>
+                    <td className="td" style={{ color: '#9A9080' }}>{u.country || <span style={{ color: '#C8C0B4' }}>—</span>}</td>
+                    <td className="td">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontWeight: 500 }}>{u.total_searches || 0}</span>
+                        {(u.total_searches || 0) > 5 && <span className="badge" style={{ background: '#EEF4EE', color: '#5A7A5A' }}>Active</span>}
+                        {(u.total_searches || 0) === 0 && <span className="badge" style={{ background: '#F5F0E8', color: '#C8C0B4' }}>Unused</span>}
+                      </div>
+                    </td>
+                    <td className="td">
+                      <span style={{ background: creditBg(u.credits ?? 0), color: creditColor(u.credits ?? 0), fontWeight: 500, fontSize: 13, padding: '3px 10px', borderRadius: 1, display: 'inline-block' }}>
+                        {u.credits ?? 0}
+                      </span>
+                    </td>
+                    <td className="td">
+                      {u.referred_by
+                        ? <span className="badge" style={{ background: '#F0F5F0', color: '#5A7A5A' }}>Via referral</span>
+                        : <span style={{ color: '#C8C0B4', fontSize: 12 }}>Direct</span>}
+                    </td>
+                    <td className="td" style={{ color: '#9A9080', fontSize: 12 }}>
+                      {u.created_at ? new Date(u.created_at).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                    </td>
+                  </tr>
+                ))}
+                {sorted.length === 0 && <tr><td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: '#9A9080', fontSize: 13 }}>No users yet.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div style={{ background: '#fff', border: '1px solid #EDEAE4', borderRadius: 2, overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid #EDEAE4', background: '#FAFAF8' }}>
+                  <th className="th">Date</th>
+                  <th className="th">Package</th>
+                  <th className="th">Revenue</th>
+                  <th className="th">Stripe fee</th>
+                  <th className="th">API cost</th>
+                  <th className="th">Profit</th>
+                  <th className="th">Credits</th>
+                  <th className="th">User</th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders.map(o => {
+                  const fee = stripeFee(o.amount_eur || 0);
+                  const api = (o.credits_added || 0) * API_COST;
+                  const profit = (o.amount_eur || 0) - fee - api;
+                  const user = users.find(u => u.id === o.user_id);
+                  const pkgBg = o.package_name?.toLowerCase().includes('pro') ? '#EEF4EE' : o.package_name?.toLowerCase().includes('plus') ? '#EEF0F8' : '#F5F0E8';
+                  const pkgColor = o.package_name?.toLowerCase().includes('pro') ? '#5A7A5A' : o.package_name?.toLowerCase().includes('plus') ? '#4A6A8A' : '#8A7040';
+                  return (
+                    <tr key={o.id} className="tr">
+                      <td className="td" style={{ color: '#9A9080', fontSize: 12, whiteSpace: 'nowrap' }}>
+                        {o.created_at ? new Date(o.created_at).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}
+                      </td>
+                      <td className="td"><span className="badge" style={{ background: pkgBg, color: pkgColor }}>{o.package_name || '—'}</span></td>
+                      <td className="td" style={{ fontWeight: 500 }}>€{(o.amount_eur || 0).toFixed(2)}</td>
+                      <td className="td" style={{ color: '#8A3A30' }}>-€{fee.toFixed(2)}</td>
+                      <td className="td" style={{ color: '#8A3A30' }}>-€{api.toFixed(2)}</td>
+                      <td className="td" style={{ color: profit >= 0 ? '#5A7A5A' : '#8A3A30', fontWeight: 500 }}>€{profit.toFixed(2)}</td>
+                      <td className="td">+{o.credits_added || 0}</td>
+                      <td className="td" style={{ color: '#9A9080', fontSize: 12 }}>{user?.full_name || user?.email || <span style={{ color: '#C8C0B4' }}>—</span>}</td>
+                    </tr>
+                  );
+                })}
+                {orders.length === 0 && <tr><td colSpan={8} style={{ padding: '2rem', textAlign: 'center', color: '#9A9080', fontSize: 13 }}>No orders yet.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
