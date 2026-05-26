@@ -254,11 +254,9 @@ export default function ScanPage() {
     });
   }, []);
 
-  // FIX 2: GPS first, IP fallback
   const detectLocation = async () => {
     setLocLoading(true);
     try {
-      // Try browser GPS first
       if (navigator.geolocation) {
         await new Promise((resolve) => {
           navigator.geolocation.getCurrentPosition(
@@ -267,7 +265,7 @@ export default function ScanPage() {
                 const { latitude, longitude } = pos.coords;
                 const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=en`);
                 const d = await r.json();
-                const addr = d.address || {}; 
+                const addr = d.address || {};
                 const countryCode = addr.country_code?.toUpperCase() || "";
                 setUserLocation({
                   country: addr.country || "",
@@ -280,7 +278,6 @@ export default function ScanPage() {
               resolve();
             },
             async () => {
-              // GPS denied — fall back to IP
               await detectByIP();
               resolve();
             },
@@ -435,14 +432,13 @@ export default function ScanPage() {
       '1. ONLY return real, active product listing pages — never return homepage URLs, category pages, or search result pages\n' +
       '2. NEVER return a listing with title like "Unable to find", "N/A", or any explanation — if you cannot find 3 results, relax size filter first, then price filter, then location\n' +
       '3. Copy the exact URL of each individual listing — this must be a direct link to a single product page from one seller, NOT a search results page or category page\n' +
-'   Example of GOOD URL: https://www.vinted.nl/items/1234567-nike-air-max\n' +
-'   Example of BAD URL: https://www.vinted.nl/catalog?search_text=nike+air+max\n' +
+      '   Example of GOOD URL: https://www.vinted.nl/items/1234567-nike-air-max\n' +
+      '   Example of BAD URL: https://www.vinted.nl/catalog?search_text=nike+air+max\n' +
       '4. Each listing must have a real price (e.g. "€89") — not "N/A"\n\n' +
       '5. Prefer listings from platforms with real-time inventory like eBay, Vinted, and Vestiaire Collective over Grailed — Grailed listings are often sold out\n\n' +
       'Reply ONLY with this JSON (no extra text):\n' +
       '{"listings":[{"title":"...","price":"' + currency + 'XX","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
 
-    // FIX 3: Web search for shops so they actually exist
     const shopsPrompt =
       'Search for real physical ' + shopType + ' in ' + shopCity + ' that carry items like: "' + identifiedItem + '".\n' +
       'Search Google for: ' + shopType + ' ' + shopCity + '\n' +
@@ -457,6 +453,8 @@ export default function ScanPage() {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
           model:"claude-sonnet-4-6", max_tokens:1000,
+          is_listing_search: true,
+          search_query: activeQ,
           tools:[{ type:"web_search_20250305", name:"web_search", max_uses:3 }],
           messages:[{ role:"user", content: listingPrompt }]
         }),
@@ -481,7 +479,6 @@ export default function ScanPage() {
     if (foundListings.length > 0) saveSearch(identifiedItem);
     setStep("results");
 
-    // FIX 3: Use sonnet + web_search for shops
     try {
       const shopData = await fetch("/api/claude", {
         method:"POST", headers:{"Content-Type":"application/json"},
@@ -528,11 +525,15 @@ export default function ScanPage() {
         method:"POST", headers:{"Content-Type":"application/json"},
         body: JSON.stringify({
           model:"claude-sonnet-4-6", max_tokens:1000,
+          is_listing_search: true,
+          search_query: activeQ,
           tools:[{ type:"web_search_20250305", name:"web_search", max_uses:3 }],
           messages:[{ role:"user", content: prompt }]
         }),
       });
       const data = await r.json();
+      if (data?.error === "no_credits") { setStep("no_credits"); setLoadingMore(false); return; }
+      if (data?._credits_remaining !== undefined) setCredits(data._credits_remaining);
       const txt = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
       const p = parseJSON(txt);
       if (p?.listings?.length) setListings(sortByPrice(p.listings.slice(0,3)));
@@ -607,7 +608,6 @@ export default function ScanPage() {
           <div style={{display:'flex',gap:'1.5rem',alignItems:'center'}}>
             <a href="/" className="app-nav-link">← Home</a>
             {credits !== null && <span style={{fontSize:10,fontWeight:300,letterSpacing:'.15em',textTransform:'uppercase',color:'#9A9080'}}>{credits} left</span>}
-            {/* FIX 1: Link naar /account pagina */}
             <a href="/account" className="app-nav-link">Account</a>
           </div>
         </nav>
