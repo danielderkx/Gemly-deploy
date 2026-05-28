@@ -19,7 +19,7 @@ export default function AccountPage() {
     if (!user) { window.location.href = '/login'; return; }
     setUser(user);
     const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-    setProfile(profile);
+    setProfile({ ...profile, email: profile?.email || user.email });
     setLoading(false);
   };
 
@@ -31,23 +31,19 @@ export default function AccountPage() {
   const handleDeleteAccount = async () => {
     setDeleting(true);
     try {
-      // Stuur deletion mail eerst
       await fetch('/api/send-deletion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: user.email,
-          name: user.user_metadata?.full_name || '',
+          email: user.email || profile?.email,
+          name: user.user_metadata?.full_name || profile?.full_name || '',
         }),
       });
-
-      // Verwijder via server-side route (heeft service role key nodig)
       await fetch('/api/delete-account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id }),
       });
-
       await supabase.auth.signOut();
       window.location.href = '/';
     } catch { setDeleting(false); }
@@ -71,6 +67,14 @@ export default function AccountPage() {
     fontWeight: 300, background: '#F5F0E8', color: '#1A1612', boxSizing: 'border-box',
   };
 
+  const btnBase = {
+    fontSize: 11, fontFamily: "'Outfit',sans-serif", fontWeight: 400,
+    letterSpacing: '.14em', textTransform: 'uppercase', cursor: 'pointer',
+    borderRadius: 2, padding: '11px 24px', width: '100%',
+  };
+  const btnGhost = { ...btnBase, background: 'transparent', color: '#1A1612', border: '1px solid #EDEAE4' };
+  const btnDanger = { ...btnBase, background: 'transparent', color: '#8A3A30', border: '1px solid #E8C8C0' };
+
   if (loading) return (
     <div style={{ minHeight:'100vh', background:'#F5F0E8', display:'flex', alignItems:'center', justifyContent:'center' }}>
       <div style={{ width:28, height:28, border:'1.5px solid #EDEAE4', borderTopColor:'#1A1612', borderRadius:'50%', animation:'spin 1s linear infinite' }}/>
@@ -88,12 +92,6 @@ export default function AccountPage() {
         @keyframes spin { to { transform:rotate(360deg); } }
         .nav-link { font-size:11px; font-weight:300; letter-spacing:.15em; text-transform:uppercase; color:#9A9080; text-decoration:none; transition:color .2s; }
         .nav-link:hover { color:#1A1612; }
-        .btn-primary { background:#1A1612; color:#fff; border:none; padding:11px 24px; font-size:11px; font-family:'Outfit',sans-serif; font-weight:400; letter-spacing:.18em; text-transform:uppercase; cursor:pointer; border-radius:2px; transition:background .2s; }
-        .btn-primary:hover { background:#3A3028; }
-        .btn-ghost { background:transparent; color:#1A1612; border:1px solid #EDEAE4; padding:11px 24px; font-size:11px; font-family:'Outfit',sans-serif; font-weight:400; letter-spacing:.14em; text-transform:uppercase; cursor:pointer; border-radius:2px; transition:border-color .2s; width:100%; }
-        .btn-ghost:hover { border-color:#1A1612; }
-        .btn-danger { background:transparent; color:#8A3A30; border:1px solid #E8C8C0; padding:11px 24px; font-size:11px; font-family:'Outfit',sans-serif; font-weight:400; letter-spacing:.14em; text-transform:uppercase; cursor:pointer; border-radius:2px; transition:all .2s; width:100%; }
-        .btn-danger:hover { background:#FDF0EE; }
         .section { background:#fff; border:1px solid #EDEAE4; border-radius:2px; padding:1.5rem; margin-bottom:1rem; }
         .section-label { font-size:10px; font-weight:400; letter-spacing:.2em; text-transform:uppercase; color:#9A9080; margin-bottom:1rem; display:block; }
         .history-item { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid #EDEAE4; }
@@ -104,7 +102,6 @@ export default function AccountPage() {
         .copy-btn.copied { background:#5A7A5A; }
       `}</style>
 
-      {/* Nav */}
       <div style={{ borderBottom:'1px solid #E8E0D4', background:'#fff' }}>
         <nav style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'1.25rem 1.75rem', maxWidth:600, margin:'0 auto' }}>
           <a href="/" style={{ fontSize:15, fontWeight:400, letterSpacing:'.12em', textTransform:'uppercase', color:'#1A1612', textDecoration:'none' }}>Gemly</a>
@@ -114,7 +111,6 @@ export default function AccountPage() {
 
       <div style={{ maxWidth:600, margin:'0 auto', padding:'2rem 1.75rem' }}>
 
-        {/* Credits */}
         <div className="section">
           <span className="section-label">Your credits</span>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
@@ -128,7 +124,6 @@ export default function AccountPage() {
           </div>
         </div>
 
-        {/* Referral */}
         <div className="section">
           <span className="section-label">Refer a friend</span>
           <p style={{ fontSize:13, fontWeight:300, color:'#9A9080', lineHeight:1.6, marginBottom:'1rem' }}>
@@ -146,7 +141,6 @@ export default function AccountPage() {
           )}
         </div>
 
-        {/* Search history */}
         <div className="section">
           <span className="section-label">Recent searches</span>
           {history.length === 0 ? (
@@ -168,31 +162,31 @@ export default function AccountPage() {
           )}
         </div>
 
-        {/* Account info */}
         <div className="section">
           <span className="section-label">Account</span>
           <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
             <input style={inp} type="text" value={user?.user_metadata?.full_name || ''} readOnly placeholder="Full name" />
-            <input style={inp} type="email" value={user?.email || ''} readOnly />
+            <input style={inp} type="email" value={user?.email || profile?.email || ''} readOnly />
             <input style={inp} type="text" value={user?.user_metadata?.country || ''} readOnly placeholder="Country" />
           </div>
         </div>
 
-        {/* Actions */}
         <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-          <button className="btn-ghost" onClick={handleSignOut}>Sign out</button>
+          <button style={btnGhost} onClick={handleSignOut}>Sign out</button>
           {!showDeleteConfirm ? (
-            <button className="btn-danger" onClick={() => setShowDeleteConfirm(true)}>Delete account</button>
+            <button style={btnDanger} onClick={() => setShowDeleteConfirm(true)}>Delete account</button>
           ) : (
             <div style={{ background:'#FDF0EE', border:'1px solid #E8C8C0', borderRadius:2, padding:'1rem', display:'flex', flexDirection:'column', gap:10 }}>
               <p style={{ fontSize:13, fontWeight:300, color:'#8A3A30', lineHeight:1.6 }}>
                 Are you sure? This permanently deletes your account and all data.
               </p>
               <div style={{ display:'flex', gap:8 }}>
-                <button className="btn-danger" onClick={handleDeleteAccount} disabled={deleting} style={{ flex:1 }}>
+                <button style={{ ...btnDanger, flex:1, width:'auto' }} onClick={handleDeleteAccount} disabled={deleting}>
                   {deleting ? 'Deleting…' : 'Yes, delete everything'}
                 </button>
-                <button className="btn-ghost" onClick={() => setShowDeleteConfirm(false)} style={{ flex:1 }}>Cancel</button>
+                <button style={{ ...btnGhost, flex:1, width:'auto' }} onClick={() => setShowDeleteConfirm(false)}>
+                  Cancel
+                </button>
               </div>
             </div>
           )}
