@@ -28,9 +28,25 @@ function LoginContent() {
     if (isSignUp) {
       if (!terms) { setMessage('Please accept the terms and conditions.'); setIsError(true); setLoading(false); return; }
       const refCode = typeof window !== 'undefined' ? localStorage.getItem('gemly_ref') : null;
-      const { error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName, country, referred_by: refCode } } });
+      const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName, country, referred_by: refCode } } });
       if (!error && refCode) localStorage.removeItem('gemly_ref');
       if (error) { setMessage(error.message); setIsError(true); setLoading(false); return; }
+
+      // Stuur welkomstmail
+      try {
+        const { data: profile } = await supabase.from('profiles').select('credits, referral_code').eq('id', data.user.id).single();
+        await fetch('/api/send-welcome', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            name: fullName,
+            credits: profile?.credits || 2,
+            referralCode: profile?.referral_code || '',
+          }),
+        });
+      } catch {}
+
       window.location.href = '/scan';
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
