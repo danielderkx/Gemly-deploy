@@ -31,7 +31,23 @@ export default function AccountPage() {
   const handleDeleteAccount = async () => {
     setDeleting(true);
     try {
-      await supabase.from('profiles').delete().eq('id', user.id);
+      // Stuur deletion mail eerst
+      await fetch('/api/send-deletion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: user.email,
+          name: user.user_metadata?.full_name || '',
+        }),
+      });
+
+      // Verwijder via server-side route (heeft service role key nodig)
+      await fetch('/api/delete-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      });
+
       await supabase.auth.signOut();
       window.location.href = '/';
     } catch { setDeleting(false); }
