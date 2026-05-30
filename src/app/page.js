@@ -5,7 +5,7 @@ import { createClient } from '../lib/supabase';
 const FAQS = [
   {
     q: 'Are results guaranteed?',
-    a: "No. Gemly searches across secondhand marketplaces and shows you what's available at that moment. We can't promise a specific item will be found — availability depends on what sellers have listed. If nothing matches, try broadening your filters or location.",
+    a: "No. Gemly searches across secondhand marketplaces and shows you what's available at that moment. We can't promise a specific item will be found, since availability depends on what sellers have listed. If nothing matches, try broadening your filters or location.",
   },
   {
     q: 'How accurate are the prices and listings?',
@@ -13,7 +13,7 @@ const FAQS = [
   },
   {
     q: 'Which platforms does Gemly search?',
-    a: 'Depending on your location, Gemly searches platforms like Vinted, Depop, Grailed, eBay, Vestiaire Collective, Marktplaats, Catawiki and more — plus physical shops near you.',
+    a: 'Depending on your location, Gemly searches platforms like Vinted, Depop, Grailed, eBay, Vestiaire Collective, Marktplaats, Catawiki and more, plus physical shops near you.',
   },
   {
     q: 'What does a search cost?',
@@ -21,7 +21,7 @@ const FAQS = [
   },
   {
     q: 'Is Gemly responsible for purchases?',
-    a: 'No. Gemly is a search tool — we point you to listings on third-party platforms. Any purchase, payment or shipping happens directly between you and the seller on that platform.',
+    a: 'No. Gemly is a search tool that points you to listings on third-party platforms. Any purchase, payment or shipping happens directly between you and the seller on that platform.',
   },
 ];
 
@@ -195,7 +195,7 @@ export default function LandingPage() {
           {FAQS.map((f, i) => <FaqItem key={i} q={f.q} a={f.a} />)}
         </div>
         <p style={{ fontSize:12, fontWeight:300, color:'#C8C0B4', lineHeight:1.7, marginTop:'2rem', borderTop:'1px solid #EDEAE4', paddingTop:'1.5rem' }}>
-          Gemly is a search and discovery tool. We surface listings from third-party marketplaces but don't sell, stock, or guarantee any item. Availability, prices and conditions are set by sellers and can change at any time.
+          Gemly is a search and discovery tool. We surface listings from third-party marketplaces but do not sell, stock, or guarantee any item. Availability, prices and conditions are set by sellers and can change at any time.
         </p>
       </div>
 
