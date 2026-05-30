@@ -2,6 +2,47 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '../lib/supabase';
 
+const FAQS = [
+  {
+    q: 'Are results guaranteed?',
+    a: "No. Gemly searches across secondhand marketplaces and shows you what's available at that moment. We can't promise a specific item will be found — availability depends on what sellers have listed. If nothing matches, try broadening your filters or location.",
+  },
+  {
+    q: 'How accurate are the prices and listings?',
+    a: 'Listings and prices come from live marketplace data and reflect what was available when you searched. Items can sell out or change price quickly, so always confirm the details on the seller’s page before buying.',
+  },
+  {
+    q: 'Which platforms does Gemly search?',
+    a: 'Depending on your location, Gemly searches platforms like Vinted, Depop, Grailed, eBay, Vestiaire Collective, Marktplaats, Catawiki and more — plus physical shops near you.',
+  },
+  {
+    q: 'What does a search cost?',
+    a: 'You get 2 free searches when you sign up. After that, each search uses 1 credit. You can top up credits anytime, and inviting a friend earns you 3 extra credits.',
+  },
+  {
+    q: 'Is Gemly responsible for purchases?',
+    a: 'No. Gemly is a search tool — we point you to listings on third-party platforms. Any purchase, payment or shipping happens directly between you and the seller on that platform.',
+  },
+];
+
+function FaqItem({ q, a }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ borderTop:'1px solid #EDEAE4' }}>
+      <button
+        onClick={() => setOpen(!open)}
+        style={{ width:'100%', background:'none', border:'none', cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center', padding:'1.25rem 0', textAlign:'left', fontFamily:"'Outfit',sans-serif" }}
+      >
+        <span style={{ fontSize:15, fontWeight:400, color:'#1A1612', letterSpacing:'-.01em' }}>{q}</span>
+        <span style={{ fontSize:18, fontWeight:200, color:'#9A9080', flexShrink:0, marginLeft:16, transform: open ? 'rotate(45deg)' : 'none', transition:'transform .2s' }}>+</span>
+      </button>
+      {open && (
+        <p style={{ fontSize:13, fontWeight:300, color:'#9A9080', lineHeight:1.75, paddingBottom:'1.25rem', maxWidth:620 }}>{a}</p>
+      )}
+    </div>
+  );
+}
+
 export default function LandingPage() {
   const [visible, setVisible] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -30,6 +71,7 @@ export default function LandingPage() {
           .nav-inner { padding: 1.25rem 1.5rem !important; }
           .nav-links { gap: 1.5rem !important; }
           .how-section { padding: 3rem 1.5rem !important; }
+          .faq-section { padding: 3rem 1.5rem !important; }
           .cta-section { padding: 3rem 1.5rem !important; }
           .footer-inner { padding: 1.25rem 1.5rem !important; }
           .feature-item { gap: 1.5rem !important; }
@@ -42,6 +84,7 @@ export default function LandingPage() {
           <div style={{ fontSize:16, fontWeight:400, letterSpacing:'.12em', textTransform:'uppercase' }}>Gemly</div>
           <div className="nav-links" style={{ display:'flex', gap:'2.5rem', alignItems:'center' }}>
             <a href="#how" className="nav-link">How it works</a>
+            <a href="#faq" className="nav-link">FAQ</a>
             {isLoggedIn
               ? <a href="/account" className="nav-link">Account</a>
               : <a href="/login" className="nav-link">Sign in</a>
@@ -142,6 +185,17 @@ export default function LandingPage() {
       <div style={{ background:'#F5F0E8', borderTop:'1px solid #EDEAE4', borderBottom:'1px solid #EDEAE4', padding:'1.5rem 2.5rem', textAlign:'center' }}>
         <p style={{ fontSize:13, fontWeight:300, color:'#9A9080', lineHeight:1.6 }}>
           🤝 Know someone who loves finding deals? Share your link — they get <strong style={{ color:'#1A1612' }}>3 free searches</strong>, you get <strong style={{ color:'#1A1612' }}>3 credits</strong>.
+        </p>
+      </div>
+
+      {/* FAQ */}
+      <div id="faq" className="faq-section" style={{ padding:'4rem 2.5rem', maxWidth:900, margin:'0 auto' }}>
+        <p style={{ fontSize:11, fontWeight:300, letterSpacing:'.25em', textTransform:'uppercase', color:'#B0A898', marginBottom:'2rem' }}>Frequently asked questions</p>
+        <div>
+          {FAQS.map((f, i) => <FaqItem key={i} q={f.q} a={f.a} />)}
+        </div>
+        <p style={{ fontSize:12, fontWeight:300, color:'#C8C0B4', lineHeight:1.7, marginTop:'2rem', borderTop:'1px solid #EDEAE4', paddingTop:'1.5rem' }}>
+          Gemly is a search and discovery tool. We surface listings from third-party marketplaces but don't sell, stock, or guarantee any item. Availability, prices and conditions are set by sellers and can change at any time.
         </p>
       </div>
 
