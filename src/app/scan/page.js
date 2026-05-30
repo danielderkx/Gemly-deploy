@@ -92,6 +92,47 @@ const parseJSON = text => {
   return null;
 };
 
+// Bouwt een listing-prompt die afhangt van first-hand vs second-hand
+const buildListingPrompt = ({ condition, activeQ, platforms, filters, locText, currency }) => {
+  if (condition === "new") {
+    return (
+      'Find BRAND NEW, first-hand listings of: "' + activeQ + '"\n\n' +
+      'Search ONLY these official brand websites and authorised retail webshops: ' + platforms + '\n\n' +
+      'STRICT REQUIREMENTS — these are NEW retail products:\n' +
+      '1. Every result MUST be a brand new item sold at retail. NEVER return secondhand, pre-owned, used, vintage or marketplace (Vinted/eBay/Depop/Grailed) listings.\n' +
+      '2. Each URL MUST be a direct product page on the retailer or brand website, showing one specific buyable product.\n' +
+      '   GOOD: https://www.zalando.nl/nike-air-max-90-sneakers-laag-ni112o0aq-a11.html\n' +
+      '   GOOD: https://www.nike.com/nl/t/air-max-90-herenschoenen-...\n' +
+      '   BAD (search page): https://www.zalando.nl/herenschoenen/?q=air+max+90\n' +
+      '   BAD (marketplace): https://www.vinted.nl/items/123\n' +
+      '3. Each result needs a real retail price (e.g. "' + currency + '149.99"), never "N/A".\n' +
+      '4. The product must currently be in stock and buyable.\n' +
+      'Filters to respect: ' + filters + '\n' +
+      'LOCATION: must ship to ' + locText + '.\n\n' +
+      'If you cannot find 3 exact matches, return the closest NEW retail products of the same model/brand — but still real product pages, never search pages.\n\n' +
+      'Reply ONLY with this JSON (no other text):\n' +
+      '{"listings":[{"title":"...","price":"' + currency + 'XX","platform":"...","url":"https://...","condition":"New","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"New","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"New","location":"..."}]}'
+    );
+  }
+  // second-hand / both
+  return (
+    'Search the web for real listings of: "' + activeQ + '"\n' +
+    'Search on these platforms: ' + platforms + '\n' +
+    'Filters: ' + filters + '\n' +
+    'LOCATION: Listings must be available in or ship to ' + locText + '. Only return results from sellers or platforms operating in ' + locText + '.\n\n' +
+    'CRITICAL RULES:\n' +
+    '1. ONLY return real, active product listing pages — never homepage URLs, category pages, or search result pages\n' +
+    '2. NEVER return a listing titled "Unable to find" or "N/A" — if you cannot find 3, relax size first, then price, then location\n' +
+    '3. Copy the exact URL of each individual listing — a direct link to a single product page from one seller, NOT a search results page\n' +
+    '   GOOD URL: https://www.vinted.nl/items/1234567-nike-air-max\n' +
+    '   BAD URL: https://www.vinted.nl/catalog?search_text=nike+air+max\n' +
+    '4. Each listing must have a real price (e.g. "' + currency + '89") — not "N/A"\n' +
+    '5. Prefer platforms with real-time inventory like eBay, Vinted and Vestiaire Collective over Grailed (often sold out)\n\n' +
+    'Reply ONLY with this JSON (no extra text):\n' +
+    '{"listings":[{"title":"...","price":"' + currency + 'XX","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}'
+  );
+};
+
 const SIZE_CATS = {
   tops:    { label:"Tops & jackets",   sizes:["XS","S","M","L","XL","XXL","3XL"] },
   bottoms: { label:"Bottoms & jeans",  sizes:["26","28","30","32","34","36","38","40"] },
@@ -325,12 +366,12 @@ export default function ScanPage() {
           model:"claude-sonnet-4-6", max_tokens:400,
           messages:[{ role:"user", content:[
             { type:"image", source:{ type:"base64", media_type:mediaType, data:base64 } },
-            { type:"text", text:'Identify this item. Reply ONLY with JSON: {"name":"Nike Air Max 90 White","searchQuery":"Nike Air Max 90 White","similarQuery":"white sneakers","needsSize":true,"cat":"shoes"}. cat: tops/bottoms/dresses/shoes/kids/watches/jewelry/null. needsSize true only for clothing/shoes. Be specific — include brand, model, colorway.' }
+            { type:"text", text:'Identify this item. Reply ONLY with JSON: {"name":"Nike Air Max 90 White","searchQuery":"Nike Air Max 90 White","similarQuery":"white sneakers","needsSize":true,"cat":"shoes"}. cat: tops/bottoms/dresses/shoes/kids/watches/jewelry/null. needsSize true only for clothing/shoes. Be specific, include brand, model, colorway.' }
           ]}]
         }),
       });
       const d = await r.json();
-      if (d?.error?.type === "rate_limit_error") { setError("Too many requests — please wait 30 seconds."); setStep("upload"); return; }
+      if (d?.error?.type === "rate_limit_error") { setError("Too many requests. Please wait 30 seconds."); setStep("upload"); return; }
       const raw = (d.content?.[0]?.text || "").trim();
       const parsed = parseJSON(raw);
       let name = parsed?.name || "";
@@ -420,24 +461,8 @@ export default function ScanPage() {
     const shopType = condition==="new" ? "physical retail stores or boutiques" : "physical vintage, thrift, consignment or streetwear stores";
     const genderText = gender && gender !== 'skip' ? gender : '';
     const filters = [condText, qualText, sizeText, genderText, priceText].filter(Boolean).join(", ");
-    const newItemInstruction = condition === "new" ? 'Priority: search official brand websites and established retail webshops first.\n' : '';
 
-    const listingPrompt =
-      'Search the web for real listings of: "' + activeQ + '"\n' +
-      'Search on these platforms: ' + platforms + '\n' +
-      newItemInstruction +
-      'Filters: ' + filters + '\n' +
-      'LOCATION: Listings must be available in or ship to ' + locText + '. Only return results from sellers or platforms operating in ' + locText + '.\n\n' +
-      'CRITICAL RULES:\n' +
-      '1. ONLY return real, active product listing pages — never return homepage URLs, category pages, or search result pages\n' +
-      '2. NEVER return a listing with title like "Unable to find", "N/A", or any explanation — if you cannot find 3 results, relax size filter first, then price filter, then location\n' +
-      '3. Copy the exact URL of each individual listing — this must be a direct link to a single product page from one seller, NOT a search results page or category page\n' +
-      '   Example of GOOD URL: https://www.vinted.nl/items/1234567-nike-air-max\n' +
-      '   Example of BAD URL: https://www.vinted.nl/catalog?search_text=nike+air+max\n' +
-      '4. Each listing must have a real price (e.g. "€89") — not "N/A"\n\n' +
-      '5. Prefer listings from platforms with real-time inventory like eBay, Vinted, and Vestiaire Collective over Grailed — Grailed listings are often sold out\n\n' +
-      'Reply ONLY with this JSON (no extra text):\n' +
-      '{"listings":[{"title":"...","price":"' + currency + 'XX","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
+    const listingPrompt = buildListingPrompt({ condition, activeQ, platforms, filters, locText, currency });
 
     const shopsPrompt =
       'Search for real physical ' + shopType + ' in ' + shopCity + ' that carry items like: "' + identifiedItem + '".\n' +
@@ -460,7 +485,7 @@ export default function ScanPage() {
         }),
       }).then(r=>r.json());
       if (listingData?.error?.type === "rate_limit_error") {
-        setError("Too many requests — please wait 30 seconds and try again.");
+        setError("Too many requests. Please wait 30 seconds and try again.");
         setStep("location"); return;
       }
       if (listingData?.error === "no_credits") {
@@ -505,20 +530,11 @@ export default function ScanPage() {
     const platforms = getSearchPlatforms(condition, userLocation?.countryCode, radius, userLocation?.continentCode, itemCategory);
     const genderText = gender && gender !== 'skip' ? gender : '';
     const filters = [condText, qualText, sizeText, genderText, priceText].filter(Boolean).join(", ");
-    const newItemInstruction = condition === "new" ? 'Priority: search official brand websites and established retail webshops first.\n' : '';
     const alreadyShown = listings.map(l => l.url).filter(Boolean).join(", ");
 
-    const prompt =
-      'You are a shopping assistant. Search for MORE listings of: "' + activeQ + '"\n\n' +
-      'PLATFORMS: ' + platforms + '\n\n' +
-      newItemInstruction +
-      'FILTERS: ' + (filters || 'none') + '\n' +
-      'LOCATION: ' + locText + '\n\n' +
-      'ALREADY SHOWN — do NOT repeat these URLs:\n' + alreadyShown + '\n\n' +
-      'Find 3 DIFFERENT listings from different sellers or platforms.\n' +
-      'RULES: Real active product pages only, real prices, exact URLs.\n\n' +
-      'Reply ONLY JSON:\n' +
-      '{"listings":[{"title":"...","price":"' + currency + 'XX","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."},{"title":"...","price":"...","platform":"...","url":"https://...","condition":"...","location":"..."}]}';
+    const basePrompt = buildListingPrompt({ condition, activeQ, platforms, filters, locText, currency });
+    const prompt = basePrompt +
+      '\n\nIMPORTANT: Find 3 DIFFERENT results. Do NOT repeat any of these URLs:\n' + alreadyShown;
 
     try {
       const r = await fetch("/api/claude", {
@@ -561,7 +577,7 @@ export default function ScanPage() {
   };
   const budgetWarn = bwLevel();
   const rC = { common:"#5A7A5A", uncommon:"#8A7040", rare:"#8A3A30", very_rare:"#6A4A8A" };
-  const rL = { common:"Widely available", uncommon:"Takes some searching", rare:"Hard to find", very_rare:"Very rare — be patient" };
+  const rL = { common:"Widely available", uncommon:"Takes some searching", rare:"Hard to find", very_rare:"Very rare, be patient" };
 
   const Back = ({ to }) => (
     <button className="back-btn" onClick={()=>setStep(to)}>
@@ -660,7 +676,7 @@ export default function ScanPage() {
               </>
             ):(
               <>
-                <p style={{fontSize:13,color:"#9A9080",margin:"0 0 1rem",lineHeight:1.5,fontWeight:300}}>Type brand, model, colour — anything.</p>
+                <p style={{fontSize:13,color:"#9A9080",margin:"0 0 1rem",lineHeight:1.5,fontWeight:300}}>Type brand, model, colour, anything.</p>
                 <div className="search-row">
                   <input className="search-input" type="text" placeholder='e.g. "Palace tri-ferg tee SS23" or "Rolex Datejust 41"'
                     value={textQuery} onChange={e=>setTextQuery(e.target.value)}
@@ -765,7 +781,7 @@ export default function ScanPage() {
             <Back to={sizeRelevant?"size":"match_type"}/>
             <span className="lbl">First-hand or second-hand?</span>
             <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:"1.25rem"}}>
-              {[{val:"new",label:"First-hand only",desc:"Brand new from retail"},{val:"used",label:"Second-hand only",desc:"Pre-owned, vintage, refurbished"},{val:"both",label:"Show me both",desc:"All options — best price wins"}].map(({val,label,desc})=>(
+              {[{val:"new",label:"First-hand only",desc:"Brand new from retail"},{val:"used",label:"Second-hand only",desc:"Pre-owned, vintage, refurbished"},{val:"both",label:"Show me both",desc:"All options, best price wins"}].map(({val,label,desc})=>(
                 <button key={val} className={"choice-card "+(condition===val?"selected":"")} onClick={()=>setCondition(val)}>
                   <span style={{fontSize:13,color:"#1A1612",display:"block",fontWeight:400}}>{label}</span>
                   <span style={{fontSize:12,color:"#9A9080",display:"block",marginTop:2,fontWeight:300}}>{desc}</span>
@@ -948,7 +964,7 @@ export default function ScanPage() {
             {condition!=="new"&&shopResults.length>0&&(
               <div className="tip-box">
                 <span style={{fontSize:16,flexShrink:0}}>🗺️</span>
-                <p style={{fontSize:12,color:"#5A7A5A",margin:0,lineHeight:1.5,fontWeight:300}}>Real stores that may carry this. Call ahead — the best finds are never online.</p>
+                <p style={{fontSize:12,color:"#5A7A5A",margin:0,lineHeight:1.5,fontWeight:300}}>Real stores that may carry this. Call ahead, the best finds are never online.</p>
               </div>
             )}
             {shopResults.length===0&&<div className="no-results">No local shops found. Try broadening your search radius.</div>}
