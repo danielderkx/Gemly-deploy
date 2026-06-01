@@ -23,6 +23,22 @@ const sortByPrice = (listings) => {
 };
 
 const getContinent = c => ({ EU:"Europe", NA:"North America", SA:"South America", AS:"Asia", AF:"Africa", OC:"Oceania" }[c] || "your continent");
+// Leidt continent-code af uit landcode (US -> NA, NL -> EU, AU -> OC, ...)
+const COUNTRY_TO_CONTINENT = {
+  // Europe
+  NL:"EU",BE:"EU",DE:"EU",FR:"EU",ES:"EU",IT:"EU",PT:"EU",SE:"EU",DK:"EU",NO:"EU",FI:"EU",PL:"EU",AT:"EU",CH:"EU",CZ:"EU",HU:"EU",RO:"EU",HR:"EU",SK:"EU",GB:"EU",IE:"EU",GR:"EU",BG:"EU",LT:"EU",LV:"EU",EE:"EU",SI:"EU",LU:"EU",IS:"EU",MT:"EU",CY:"EU",RS:"EU",UA:"EU",
+  // North America
+  US:"NA",CA:"NA",MX:"NA",CR:"NA",PA:"NA",GT:"NA",CU:"NA",DO:"NA",
+  // South America
+  BR:"SA",AR:"SA",CL:"SA",CO:"SA",PE:"SA",UY:"SA",VE:"SA",EC:"SA",BO:"SA",PY:"SA",
+  // Asia
+  JP:"AS",CN:"AS",IN:"AS",KR:"AS",ID:"AS",TH:"AS",VN:"AS",PH:"AS",MY:"AS",SG:"AS",HK:"AS",TW:"AS",AE:"AS",SA:"AS",IL:"AS",TR:"AS",PK:"AS",
+  // Africa
+  ZA:"AF",NG:"AF",EG:"AF",MA:"AF",KE:"AF",GH:"AF",TN:"AF",DZ:"AF",
+  // Oceania
+  AU:"OC",NZ:"OC",FJ:"OC",
+};
+const continentFromCountry = cc => cc ? (COUNTRY_TO_CONTINENT[cc.toUpperCase()] || null) : null;
 const getFlag = c => !c ? "🌍" : c.toUpperCase().replace(/./g, x => String.fromCodePoint(x.charCodeAt(0)+127397));
 const getCurrency = cc => ({ GB:"£", US:"$", CA:"CA$", AU:"AU$", CH:"CHF", JP:"¥" }[cc] || "€");
 
@@ -147,7 +163,7 @@ const QUALITY_OPTS = [
   { val:"fair",          label:"Fair / worn",    desc:"Visible wear, fully usable",  dot:"#FF9800" },
   { val:"any",           label:"Any condition",  desc:"Show me everything",          dot:"#C9C2B8" },
 ];
-const STEP_ORDER = ["match_type","gender","size","condition","quality","price","location","results"];
+const STEP_ORDER = ["match_type","gender","size","condition","price","results"];
 
 const S = `
   @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500&display=swap');
@@ -295,6 +311,12 @@ export default function ScanPage() {
     });
   }, []);
 
+  // Bepaal automatisch hoe ver we zoeken: continent als we de locatie kennen, anders worldwide.
+  useEffect(() => {
+    if (locLoading) return;
+    setRadius(userLocation && userLocation.continentCode ? "continent" : "worldwide");
+  }, [userLocation, locLoading]);
+
   const detectLocation = async () => {
     setLocLoading(true);
     try {
@@ -308,12 +330,13 @@ export default function ScanPage() {
                 const d = await r.json();
                 const addr = d.address || {};
                 const countryCode = addr.country_code?.toUpperCase() || "";
+                const contCode = continentFromCountry(countryCode);
                 setUserLocation({
                   country: addr.country || "",
                   countryCode,
                   city: addr.city || addr.town || addr.village || addr.municipality || "",
-                  continent: getContinent(null),
-                  continentCode: null,
+                  continent: getContinent(contCode),
+                  continentCode: contCode,
                 });
               } catch {}
               resolve();
@@ -341,7 +364,11 @@ export default function ScanPage() {
       if (!d?.country_name) {
         try { const r = await fetch("https://ip-api.com/json/"); d = await r.json(); d.country_name=d.country; d.country_code=d.countryCode; } catch {}
       }
-      if (d?.country_name) setUserLocation({ country:d.country_name, countryCode:d.country_code, city:d.city, continent:getContinent(d.continent_code), continentCode:d.continent_code });
+      if (d?.country_name) {
+        const cc = (d.country_code || "").toUpperCase();
+        const contCode = d.continent_code || continentFromCountry(cc);
+        setUserLocation({ country:d.country_name, countryCode:cc, city:d.city, continent:getContinent(contCode), continentCode:contCode });
+      }
     } catch {}
   };
 
@@ -486,7 +513,7 @@ export default function ScanPage() {
       }).then(r=>r.json());
       if (listingData?.error?.type === "rate_limit_error") {
         setError("Too many requests. Please wait 30 seconds and try again.");
-        setStep("location"); return;
+        setStep("price"); return;
       }
       if (listingData?.error === "no_credits") {
         setStep("no_credits"); return;
@@ -788,34 +815,15 @@ export default function ScanPage() {
                 </button>
               ))}
             </div>
-            <button className="btn-primary" disabled={!condition} onClick={()=>setStep(condition==="new"?"price":"quality")}>Continue</button>
+            <button className="btn-primary" disabled={!condition} onClick={()=>setStep("price")}>Continue</button>
           </div>
         )}
 
-        {step==="quality"&&(
-          <div className="slide-in">
-            <Back to="condition"/>
-            <span className="lbl">Desired condition</span>
-            <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:"1.25rem"}}>
-              {QUALITY_OPTS.map(({val,label,desc,dot})=>(
-                <button key={val} className={"choice-card "+(quality===val?"selected":"")} onClick={()=>setQuality(val)}>
-                  <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
-                    <div className="cdot" style={{background:dot,marginTop:4}}/>
-                    <div>
-                      <span style={{fontSize:13,color:"#1A1612",display:"block",fontWeight:400}}>{label}</span>
-                      <span style={{fontSize:12,color:"#9A9080",display:"block",marginTop:2,fontWeight:300}}>{desc}</span>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-            <button className="btn-primary" disabled={!quality} onClick={()=>setStep("price")}>Continue</button>
-          </div>
-        )}
+
 
         {step==="price"&&(
           <div className="slide-in">
-            <Back to={condition==="new"?"condition":"quality"}/>
+            <Back to="condition"/>
             <span className="lbl">Your budget</span>
             <PriceWidget/>
             <p style={{color:"#9A9080",fontSize:12,margin:"0 0 1.25rem",fontWeight:300}}>Leave blank to skip</p>
@@ -838,35 +846,11 @@ export default function ScanPage() {
                 </div>
               </div>
             )}
-            <button className="btn-primary" onClick={()=>setStep("location")}>Continue</button>
+            <button className="btn-primary" disabled={locLoading} onClick={handleSearch}>Find deals &amp; shops</button>
           </div>
         )}
 
-        {step==="location"&&(
-          <div className="slide-in">
-            <Back to="price"/>
-            <span className="lbl">How far will you shop?</span>
-            {userLocation&&<p style={{color:"#9A9080",fontSize:12,margin:"0 0 1rem",fontWeight:300}}>You're in <strong style={{color:"#1A1612",fontWeight:400}}>{userLocation.country}</strong>.</p>}
-            <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:"1.25rem"}}>
-              {[
-                {val:"country",label:userLocation?userLocation.country+" only":"My country only",icon:userLocation?getFlag(userLocation.countryCode):"📍",desc:"Local shops & platforms"},
-                {val:"continent",label:userLocation?userLocation.continent:"My continent",icon:"🌍",desc:"Shops & platforms across your continent"},
-                {val:"worldwide",label:"Worldwide",icon:"🌐",desc:"No limits, international shipping"},
-              ].map(({val,label,icon,desc})=>(
-                <button key={val} className={"choice-card "+(radius===val?"selected":"")} onClick={()=>setRadius(val)}>
-                  <div style={{display:"flex",alignItems:"center",gap:12}}>
-                    <span style={{fontSize:22,lineHeight:1,flexShrink:0}}>{icon}</span>
-                    <div>
-                      <span style={{fontSize:13,color:"#1A1612",display:"block",fontWeight:400}}>{label}</span>
-                      <span style={{fontSize:12,color:"#9A9080",display:"block",marginTop:2,fontWeight:300}}>{desc}</span>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-            <button className="btn-primary" disabled={!radius || locLoading} onClick={handleSearch}>Find deals &amp; shops</button>
-          </div>
-        )}
+
 
         {step==="searching"&&(
           <div className="slide-in spinner-wrap">
@@ -927,7 +911,6 @@ export default function ScanPage() {
               {condition==="new"&&<span className="tag">First-hand</span>}
               {condition==="used"&&<span className="tag">Second-hand</span>}
               {condition==="both"&&<span className="tag">New &amp; used</span>}
-              {quality&&condition!=="new"&&<span className="tag">{QUALITY_OPTS.find(q=>q.val===quality)?.label}</span>}
               {(priceMin||priceMax)&&<span className="tag">{currency}{priceMin||"0"}–{priceMax?currency+priceMax:"any"}</span>}
               {radius&&userLocation&&<span className="tag">{locLbl()}</span>}
             </div>
