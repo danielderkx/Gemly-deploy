@@ -22,6 +22,44 @@ const sortByPrice = (listings) => {
   });
 };
 
+// Herkent zoekpagina's, categoriepagina's en homepages — dat zijn GEEN echte advertenties.
+// Geeft true terug als de URL een ECHTE losse advertentie/productpagina lijkt te zijn.
+const isRealListingUrl = (url) => {
+  if (!url || typeof url !== "string") return false;
+  let u;
+  try { u = new URL(url); } catch { return false; }
+  if (u.protocol !== "http:" && u.protocol !== "https:") return false;
+
+  const path = u.pathname.toLowerCase();
+  const query = u.search.toLowerCase();
+  const full = (path + query);
+
+  // 1. Homepage of bijna leeg pad -> geen advertentie
+  if (path === "/" || path === "" || path.length < 4) return false;
+
+  // 2. Zoek-/categoriepagina-signalen in de query string
+  const badQuery = ["search_text=", "?q=", "&q=", "?query=", "&query=", "_nkw=", "keyword=", "search="];
+  if (badQuery.some(s => query.includes(s))) return false;
+
+  // 3. Zoek-/categoriepagina-signalen in het pad
+  const badPath = [
+    "/catalog", "/search", "/sch/", "/s/", "/results", "/browse",
+    "/c/", "/category", "/categorie", "/shop?", "/l/", "/zoeken", "/recherche"
+  ];
+  if (badPath.some(s => path.startsWith(s) || path.includes(s))) return false;
+
+  // 4. Echte advertenties hebben bijna altijd een lange ID ergens in het pad
+  //    (Vinted /items/1234567, eBay /itm/123456789, Grailed /listings/123456, etc.)
+  const hasItemPath = /\/(items?|itm|listing|listings|product|products|annonce|anuncio|inserat|ad|advert|v|m|p)\//.test(path);
+  const hasLongId = /\d{6,}/.test(path);
+
+  // Geldig als er een duidelijk item-pad is, OF een lange numerieke ID in het pad
+  return hasItemPath || hasLongId;
+};
+
+// Filtert een listings-array: alleen echte advertenties blijven over.
+const keepRealListings = (arr) => (Array.isArray(arr) ? arr.filter(l => isRealListingUrl(l?.url)) : []);
+
 const getContinent = c => ({ EU:"Europe", NA:"North America", SA:"South America", AS:"Asia", AF:"Africa", OC:"Oceania" }[c] || "your continent");
 // Leidt continent-code af uit landcode (US -> NA, NL -> EU, AU -> OC, ...)
 const COUNTRY_TO_CONTINENT = {
@@ -523,7 +561,41 @@ export default function ScanPage() {
       }
       const txt = (listingData.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
       const p = parseJSON(txt);
-      if (p?.listings?.length) foundListings = p.listings.slice(0,3);
+      // Alleen echte advertenties houden — zoek-/categoriepagina's eruit filteren
+      if (p?.listings?.length) foundListings = keepRealListings(p.listings).slice(0,3);
+
+      // Te weinig echte advertenties? Eén automatische retry, met de afgekeurde URLs erbij.
+      if (foundListings.length < 3) {
+        const rejected = (p?.listings || []).map(l => l?.url).filter(Boolean);
+        const retryPrompt = listingPrompt +
+          '\n\nIMPORTANT: Your previous answer contained search pages or category pages, NOT real listings. ' +
+          'These URLs were REJECTED because they are search/category/homepage URLs, not single product pages:\n' +
+          rejected.join("\n") +
+          '\n\nReturn ONLY direct links to individual product/advertisement pages, each showing ONE specific item from ONE seller. ' +
+          'A real listing URL contains an item ID, e.g. /items/1234567 or /itm/123456789 — never /catalog, /search, /sch/, ?q= or ?search_text=.';
+        try {
+          const retryData = await fetch("/api/claude", {
+            method:"POST", headers:{"Content-Type":"application/json"},
+            body: JSON.stringify({
+              model:"claude-sonnet-4-6", max_tokens:1000,
+              is_listing_search: true,
+              search_query: activeQ,
+              tools:[{ type:"web_search_20250305", name:"web_search", max_uses:3 }],
+              messages:[{ role:"user", content: retryPrompt }]
+            }),
+          }).then(r=>r.json());
+          if (retryData?._credits_remaining !== undefined) setCredits(retryData._credits_remaining);
+          const rtxt = (retryData.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+          const rp = parseJSON(rtxt);
+          const retryReal = keepRealListings(rp?.listings || []);
+          // Combineer, ontdubbel op URL, houd er max 3
+          const seen = new Set(foundListings.map(l => l.url));
+          for (const l of retryReal) {
+            if (!seen.has(l.url)) { foundListings.push(l); seen.add(l.url); }
+            if (foundListings.length >= 3) break;
+          }
+        } catch {}
+      }
     } catch {}
 
     setSearchPhase(3);
@@ -579,7 +651,8 @@ export default function ScanPage() {
       if (data?._credits_remaining !== undefined) setCredits(data._credits_remaining);
       const txt = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
       const p = parseJSON(txt);
-      if (p?.listings?.length) setListings(sortByPrice(p.listings.slice(0,3)));
+      const real = keepRealListings(p?.listings || []).slice(0,3);
+      if (real.length) setListings(sortByPrice(real));
     } catch {}
     setLoadingMore(false);
   };
