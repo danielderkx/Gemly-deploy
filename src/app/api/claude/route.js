@@ -113,7 +113,7 @@ export async function POST(request) {
       }
 
       const { data: profile, error: profileError } = await supabase
-        .from('profiles').select('credits').eq('id', user.id).single();
+       .from('profiles').select('credits, total_searches').eq('id', user.id).single();
 
       if (profileError || !profile) {
         return Response.json({ error: 'profile_error', message: 'Could not load your profile.' }, { status: 500 });
