@@ -11,9 +11,6 @@ const supabaseAdmin = createClient(
 );
 
 export async function POST(request) {
-  // We verzamelen debug-info zodat je in de browser ziet wat er met de mail gebeurt.
-  const debug = {};
-
   try {
     const authHeader = request.headers.get('authorization');
     const token = authHeader?.replace('Bearer ', '').trim();
@@ -38,35 +35,32 @@ export async function POST(request) {
       user.user_metadata?.full_name ||
       null;
 
-    debug.hasEmail = !!email;
-    debug.email = email || null;
-    debug.hasResendKey = !!process.env.RESEND_API_KEY;
-
     // 1. Orders NIET verwijderen, maar anonimiseren: koppel ze los van de gebruiker.
+    //    Bedrag en datum blijven bewaard voor je boekhouding/omzetadministratie.
     try {
       await supabaseAdmin.from('orders').update({ user_id: null }).eq('user_id', userId);
     } catch (e) {
       console.error('orders anonimiseren mislukt (non-fatal):', e?.message);
     }
 
-    // 2. Profiel verwijderen.
+    // 2. Profiel verwijderen (bevat persoonsgegevens zoals naam en zoekgeschiedenis).
     try {
       await supabaseAdmin.from('profiles').delete().eq('id', userId);
     } catch (e) {
       console.error('profiles delete mislukt (non-fatal):', e?.message);
     }
 
-    // 3. Verwijder de échte auth-gebruiker.
+    // 3. Verwijder de échte auth-gebruiker — hierdoor kan er niet meer ingelogd worden.
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
 
     if (deleteError) {
       return NextResponse.json({ error: deleteError.message }, { status: 500 });
     }
 
-    // 4. Stuur de bevestigingsmail. Resultaat + eventuele fout komen in 'debug'.
+    // 4. Stuur de bevestigingsmail (mag het verwijderen niet blokkeren).
     if (email) {
       try {
-        const sendResult = await resend.emails.send({
+        await resend.emails.send({
           from: 'Gemly <noreply@gemly.org>',
           to: email,
           subject: 'Your Gemly account has been deleted',
@@ -90,15 +84,13 @@ export async function POST(request) {
             </div>
           `,
         });
-        debug.resendData = sendResult?.data || null;
-        debug.resendError = sendResult?.error || null;
       } catch (e) {
-        debug.resendException = e?.message || String(e);
+        console.error('deletion email mislukt (non-fatal):', e?.message);
       }
     }
 
-    return NextResponse.json({ success: true, debug });
+    return NextResponse.json({ success: true });
   } catch (err) {
-    return NextResponse.json({ error: err.message, debug }, { status: 500 });
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
