@@ -1,13 +1,11 @@
 import { Resend } from 'resend';
 const resend = new Resend(process.env.RESEND_API_KEY);
-
 export async function POST(request) {
   try {
     const { email, name, credits, referralCode } = await request.json();
     if (!email) return Response.json({ error: 'Missing email' }, { status: 400 });
-
     const { data, error } = await resend.emails.send({
-      from: 'Gemly <onboarding@resend.dev>',
+      from: 'Gemly <noreply@gemly.org>',
       to: email,
       subject: 'Welcome to Gemly',
       html: `
@@ -33,7 +31,6 @@ export async function POST(request) {
         </div>
       `,
     });
-
     if (error) return Response.json({ error }, { status: 500 });
     return Response.json({ ok: true, data });
   } catch (err) {
