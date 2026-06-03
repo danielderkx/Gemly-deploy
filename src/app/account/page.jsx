@@ -9,7 +9,6 @@ export default function AccountPage() {
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [debugInfo, setDebugInfo] = useState(null);
 
   const supabase = createClient();
 
@@ -31,7 +30,6 @@ export default function AccountPage() {
 
   const handleDeleteAccount = async () => {
     setDeleting(true);
-    setDebugInfo(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { setDeleting(false); return; }
@@ -43,12 +41,15 @@ export default function AccountPage() {
 
       const result = await res.json();
 
-      // Toon de debug-info op het scherm in plaats van te verwijderen/uitloggen.
-      // Zo kun je rustig lezen wat er met de mail gebeurde.
-      setDebugInfo(JSON.stringify(result, null, 2));
-      setDeleting(false);
+      if (result.success) {
+        await supabase.auth.signOut();
+        window.location.href = '/';
+      } else {
+        alert('Verwijderen mislukt: ' + (result.error || 'onbekende fout'));
+        setDeleting(false);
+      }
     } catch (err) {
-      setDebugInfo('Fout: ' + err.message);
+      alert('Verwijderen mislukt: ' + err.message);
       setDeleting(false);
     }
   };
@@ -192,13 +193,6 @@ export default function AccountPage() {
                   Cancel
                 </button>
               </div>
-            </div>
-          )}
-
-          {debugInfo && (
-            <div style={{ background:'#1A1612', color:'#9FE89F', borderRadius:2, padding:'1rem', marginTop:8 }}>
-              <p style={{ fontSize:10, color:'#F5F0E8', letterSpacing:'.15em', textTransform:'uppercase', marginBottom:8 }}>Debug — wat gebeurde er met de mail</p>
-              <pre style={{ fontSize:12, whiteSpace:'pre-wrap', wordBreak:'break-word', fontFamily:'monospace', margin:0 }}>{debugInfo}</pre>
             </div>
           )}
         </div>
