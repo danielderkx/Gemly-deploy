@@ -61,7 +61,7 @@ export async function POST(request) {
     if (email) {
       try {
         await resend.emails.send({
-          from: 'Gemly <onboarding@resend.dev>',
+          from: 'Gemly <noreply@gemly.org>',
           to: email,
           subject: 'Your Gemly account has been deleted',
           html: `
