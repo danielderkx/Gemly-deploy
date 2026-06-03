@@ -6,6 +6,20 @@ const ADMIN_PASSWORD = 'gemly2026';
 const API_COST = 0.20;
 const stripeFee = (amount) => amount * 0.014 + 0.25;
 
+// Maakt van search_history altijd een array, of het nu een array of een JSON-string is.
+const parseHistory = (raw) => {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === 'string' && raw.trim()) {
+    try {
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+};
+
 export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
   const [pw, setPw] = useState('');
@@ -63,23 +77,21 @@ export default function AdminPage() {
     .sort((a, b) => b.users - a.users);
   const maxUsers = countries[0]?.users || 1;
 
-  // ---- SCANS: lees alle search_history uit de profielen (data bestaat al) ----
+  // ---- SCANS: lees alle search_history uit de profielen (array OF string) ----
   const allScans = [];
   users.forEach(u => {
-    const hist = Array.isArray(u.search_history) ? u.search_history : [];
+    const hist = parseHistory(u.search_history);
     hist.forEach(item => {
       if (item && item.query) {
         allScans.push({ query: item.query, date: item.date || null });
       }
     });
   });
-  // Recentste eerst
   const recentScans = [...allScans].sort((a, b) => {
     const ad = a.date ? new Date(a.date).getTime() : 0;
     const bd = b.date ? new Date(b.date).getTime() : 0;
     return bd - ad;
   });
-  // Trend: meest gezochte items (op exacte zoekterm)
   const queryCount = {};
   allScans.forEach(s => {
     const key = s.query.trim();
@@ -295,7 +307,6 @@ export default function AdminPage() {
             </table>
           </div>
         ) : (
-          // ---- SCANS TAB ----
           <div>
             <div style={{ background: '#fff', border: '1px solid #EDEAE4', borderRadius: 2, padding: '1.25rem 1.5rem', marginBottom: '1.5rem' }}>
               <div style={{ fontSize: 10, fontWeight: 400, letterSpacing: '.16em', textTransform: 'uppercase', color: '#9A9080', marginBottom: '1rem' }}>Most searched items</div>
