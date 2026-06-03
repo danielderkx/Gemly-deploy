@@ -63,6 +63,35 @@ export default function AdminPage() {
     .sort((a, b) => b.users - a.users);
   const maxUsers = countries[0]?.users || 1;
 
+  // ---- SCANS: lees alle search_history uit de profielen (data bestaat al) ----
+  const allScans = [];
+  users.forEach(u => {
+    const hist = Array.isArray(u.search_history) ? u.search_history : [];
+    hist.forEach(item => {
+      if (item && item.query) {
+        allScans.push({ query: item.query, date: item.date || null });
+      }
+    });
+  });
+  // Recentste eerst
+  const recentScans = [...allScans].sort((a, b) => {
+    const ad = a.date ? new Date(a.date).getTime() : 0;
+    const bd = b.date ? new Date(b.date).getTime() : 0;
+    return bd - ad;
+  });
+  // Trend: meest gezochte items (op exacte zoekterm)
+  const queryCount = {};
+  allScans.forEach(s => {
+    const key = s.query.trim();
+    queryCount[key] = (queryCount[key] || 0) + 1;
+  });
+  const topQueries = Object.entries(queryCount)
+    .map(([query, count]) => ({ query, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 15);
+  const maxQueryCount = topQueries[0]?.count || 1;
+  // -------------------------------------------------------------------------
+
   const Arrow = ({ col }) => (
     <span style={{ color: sortBy === col ? '#1A1612' : '#C8C0B4', fontSize: 10, marginLeft: 4 }}>
       {sortBy === col ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
@@ -166,9 +195,9 @@ export default function AdminPage() {
         </div>
 
         <div style={{ display: 'flex', gap: 6, marginBottom: '1rem' }}>
-          {['users', 'orders'].map(t => (
+          {['users', 'orders', 'scans'].map(t => (
             <button key={t} onClick={() => setTab(t)} style={{ background: tab === t ? '#1A1612' : '#fff', color: tab === t ? '#fff' : '#9A9080', border: '1px solid', borderColor: tab === t ? '#1A1612' : '#EDEAE4', borderRadius: 2, padding: '7px 18px', fontSize: 11, fontFamily: "'Outfit',sans-serif", fontWeight: 400, letterSpacing: '.14em', textTransform: 'uppercase', cursor: 'pointer' }}>
-              {t === 'users' ? `Users (${users.length})` : `Orders (${orders.length})`}
+              {t === 'users' ? `Users (${users.length})` : t === 'orders' ? `Orders (${orders.length})` : `Scans (${allScans.length})`}
             </button>
           ))}
         </div>
@@ -223,7 +252,7 @@ export default function AdminPage() {
               </tbody>
             </table>
           </div>
-        ) : (
+        ) : tab === 'orders' ? (
           <div style={{ background: '#fff', border: '1px solid #EDEAE4', borderRadius: 2, overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
@@ -264,6 +293,50 @@ export default function AdminPage() {
                 {orders.length === 0 && <tr><td colSpan={8} style={{ padding: '2rem', textAlign: 'center', color: '#9A9080', fontSize: 13 }}>No orders yet.</td></tr>}
               </tbody>
             </table>
+          </div>
+        ) : (
+          // ---- SCANS TAB ----
+          <div>
+            <div style={{ background: '#fff', border: '1px solid #EDEAE4', borderRadius: 2, padding: '1.25rem 1.5rem', marginBottom: '1.5rem' }}>
+              <div style={{ fontSize: 10, fontWeight: 400, letterSpacing: '.16em', textTransform: 'uppercase', color: '#9A9080', marginBottom: '1rem' }}>Most searched items</div>
+              {topQueries.length === 0 ? (
+                <p style={{ fontSize: 13, color: '#C8C0B4', fontWeight: 300 }}>No scans yet.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {topQueries.map(({ query, count }) => (
+                    <div key={query} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ flex: 1, fontSize: 13, fontWeight: 300, color: '#1A1612', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{query}</div>
+                      <div style={{ width: 160, height: 6, background: '#F5F0E8', borderRadius: 1, overflow: 'hidden', flexShrink: 0 }}>
+                        <div style={{ width: `${(count / maxQueryCount) * 100}%`, height: '100%', background: '#1A1612', borderRadius: 1, transition: 'width .4s' }} />
+                      </div>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: '#1A1612', width: 28, textAlign: 'right', flexShrink: 0 }}>{count}×</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{ background: '#fff', border: '1px solid #EDEAE4', borderRadius: 2, overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #EDEAE4', background: '#FAFAF8' }}>
+                    <th className="th">Search query</th>
+                    <th className="th">When</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentScans.slice(0, 100).map((s, i) => (
+                    <tr key={i} className="tr">
+                      <td className="td" style={{ fontWeight: 400 }}>{s.query}</td>
+                      <td className="td" style={{ color: '#9A9080', fontSize: 12, whiteSpace: 'nowrap' }}>
+                        {s.date ? new Date(s.date).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                  {recentScans.length === 0 && <tr><td colSpan={2} style={{ padding: '2rem', textAlign: 'center', color: '#9A9080', fontSize: 13 }}>No scans yet.</td></tr>}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
