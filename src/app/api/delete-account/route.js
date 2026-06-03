@@ -1,94 +1,205 @@
-import { Resend } from 'resend';
-import { createClient } from '@supabase/supabase-js';
-import { NextResponse } from 'next/server';
+'use client';
+import { useState, useEffect } from 'react';
+import { createClient } from '../../lib/supabase';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+export default function AccountPage() {
+  const [profile, setProfile] = useState(null);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
+  const supabase = createClient();
 
-export async function POST(request) {
-  try {
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '').trim();
+  useEffect(() => { loadProfile(); }, []);
 
-    if (!token) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-    }
+  const loadProfile = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { window.location.href = '/login'; return; }
+    setUser(user);
+    const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+    setProfile({ ...profile, email: profile?.email || user.email });
+    setLoading(false);
+  };
 
-    // Verifieer het token en haal het echte user-id op (vertrouw geen client-id's)
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/';
+  };
 
-    if (userError || !user) {
-      return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
-    }
-
-    const userId = user.id;
-
-    // Leg e-mail + naam vast VOORDAT we verwijderen — daarna kunnen we ze niet meer ophalen.
-    const email = user.email;
-    const name =
-      user.user_metadata?.name ||
-      user.user_metadata?.full_name ||
-      null;
-
-    // 1. Ruim afhankelijke rijen op (non-fatal — verwijderen gebeurt in stap 2).
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
     try {
-      await supabaseAdmin.from('orders').delete().eq('user_id', userId);
-    } catch (e) {
-      console.error('orders delete failed (non-fatal):', e?.message);
+      // Haal het toegangspasje (token) van de ingelogde gebruiker op.
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { setDeleting(false); return; }
+
+      // Stuur het pasje mee naar de server. Die verwijdert het account
+      // en stuurt zelf de bevestigingsmail. Geen aparte mail-aanroep meer nodig.
+      const res = await fetch('/api/delete-account', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}` },
+      });
+
+      const result = await res.json();
+
+      if (result.success) {
+        await supabase.auth.signOut();
+        window.location.href = '/';
+      } else {
+        alert('Verwijderen mislukt: ' + (result.error || 'onbekende fout'));
+        setDeleting(false);
+      }
+    } catch (err) {
+      alert('Verwijderen mislukt: ' + err.message);
+      setDeleting(false);
     }
+  };
 
-    try {
-      await supabaseAdmin.from('profiles').delete().eq('id', userId);
-    } catch (e) {
-      console.error('profiles delete failed (non-fatal):', e?.message);
-    }
+  const referralLink = profile?.referral_code
+    ? `https://www.gemly.org/join?ref=${profile.referral_code}`
+    : null;
 
-    // 2. Verwijder de échte auth-gebruiker — dit ontbrak, daarom kon je nog inloggen.
-    const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+  const copyReferralLink = () => {
+    if (!referralLink) return;
+    navigator.clipboard.writeText(referralLink).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
 
-    if (deleteError) {
-      return NextResponse.json({ error: deleteError.message }, { status: 500 });
-    }
+  const inp = {
+    width: '100%', padding: '10px 14px', border: '1px solid #EDEAE4',
+    borderRadius: 2, fontSize: 13, fontFamily: "'Outfit',sans-serif",
+    fontWeight: 300, background: '#F5F0E8', color: '#1A1612', boxSizing: 'border-box',
+  };
 
-    // 3. Stuur de bevestigingsmail (non-fatal — mag het verwijderen niet blokkeren).
-    if (email) {
-      try {
-        await resend.emails.send({
-          from: 'Gemly <onboarding@resend.dev>',
-          to: email,
-          subject: 'Your Gemly account has been deleted',
-          html: `
-            <div style="font-family:'Outfit',sans-serif;max-width:520px;margin:0 auto;">
-              <div style="background:#1A1612;padding:28px 36px;">
-                <p style="font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:#F5F0E8;margin:0;">Gemly</p>
+  const btnBase = {
+    fontSize: 11, fontFamily: "'Outfit',sans-serif", fontWeight: 400,
+    letterSpacing: '.14em', textTransform: 'uppercase', cursor: 'pointer',
+    borderRadius: 2, padding: '11px 24px', width: '100%',
+  };
+  const btnGhost = { ...btnBase, background: 'transparent', color: '#1A1612', border: '1px solid #EDEAE4' };
+  const btnDanger = { ...btnBase, background: 'transparent', color: '#8A3A30', border: '1px solid #E8C8C0' };
+
+  if (loading) return (
+    <div style={{ minHeight:'100vh', background:'#F5F0E8', display:'flex', alignItems:'center', justifyContent:'center' }}>
+      <div style={{ width:28, height:28, border:'1.5px solid #EDEAE4', borderTopColor:'#1A1612', borderRadius:'50%', animation:'spin 1s linear infinite' }}/>
+      <style>{`@keyframes spin { to { transform:rotate(360deg); } }`}</style>
+    </div>
+  );
+
+  const history = profile?.search_history || [];
+
+  return (
+    <div style={{ minHeight:'100vh', background:'#F5F0E8', fontFamily:"'Outfit',sans-serif" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500&display=swap');
+        *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+        .nav-link { font-size:11px; font-weight:300; letter-spacing:.15em; text-transform:uppercase; color:#9A9080; text-decoration:none; transition:color .2s; }
+        .nav-link:hover { color:#1A1612; }
+        .section { background:#fff; border:1px solid #EDEAE4; border-radius:2px; padding:1.5rem; margin-bottom:1rem; }
+        .section-label { font-size:10px; font-weight:400; letter-spacing:.2em; text-transform:uppercase; color:#9A9080; margin-bottom:1rem; display:block; }
+        .history-item { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid #EDEAE4; }
+        .history-item:last-child { border-bottom:none; }
+        .ref-box { background:#F5F0E8; border:1px solid #EDEAE4; border-radius:2px; padding:10px 14px; font-size:12px; font-weight:300; color:#1A1612; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .copy-btn { background:#1A1612; color:#fff; border:none; padding:10px 16px; font-size:11px; font-family:'Outfit',sans-serif; font-weight:400; letter-spacing:.12em; text-transform:uppercase; cursor:pointer; border-radius:2px; white-space:nowrap; transition:background .2s; }
+        .copy-btn:hover { background:#3A3028; }
+        .copy-btn.copied { background:#5A7A5A; }
+      `}</style>
+
+      <div style={{ borderBottom:'1px solid #E8E0D4', background:'#fff' }}>
+        <nav style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'1.25rem 1.75rem', maxWidth:600, margin:'0 auto' }}>
+          <a href="/" style={{ fontSize:15, fontWeight:400, letterSpacing:'.12em', textTransform:'uppercase', color:'#1A1612', textDecoration:'none' }}>Gemly</a>
+          <a href="/scan" className="nav-link">← Scanner</a>
+        </nav>
+      </div>
+
+      <div style={{ maxWidth:600, margin:'0 auto', padding:'2rem 1.75rem' }}>
+
+        <div className="section">
+          <span className="section-label">Your credits</span>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+            <div>
+              <div style={{ fontSize:48, fontWeight:200, color:'#1A1612', lineHeight:1 }}>{profile?.credits ?? 0}</div>
+              <div style={{ fontSize:13, fontWeight:300, color:'#9A9080', marginTop:4 }}>searches remaining</div>
+            </div>
+            <a href="/pricing" style={{ display:'inline-block', background:'#1A1612', color:'#fff', fontSize:11, fontWeight:400, letterSpacing:'.18em', textTransform:'uppercase', textDecoration:'none', padding:'11px 20px', borderRadius:2 }}>
+              Get more
+            </a>
+          </div>
+        </div>
+
+        <div className="section">
+          <span className="section-label">Refer a friend</span>
+          <p style={{ fontSize:13, fontWeight:300, color:'#9A9080', lineHeight:1.6, marginBottom:'1rem' }}>
+            Share your link — your friend gets <strong style={{ color:'#1A1612' }}>3 free searches</strong> when they sign up. You get <strong style={{ color:'#1A1612' }}>3 credits</strong> too.
+          </p>
+          {referralLink ? (
+            <div style={{ display:'flex', gap:8 }}>
+              <div className="ref-box">{referralLink}</div>
+              <button className={`copy-btn${copied ? ' copied' : ''}`} onClick={copyReferralLink}>
+                {copied ? '✓ Copied' : 'Copy link'}
+              </button>
+            </div>
+          ) : (
+            <p style={{ fontSize:12, fontWeight:300, color:'#9A9080' }}>Referral link loading…</p>
+          )}
+        </div>
+
+        <div className="section">
+          <span className="section-label">Recent searches</span>
+          {history.length === 0 ? (
+            <p style={{ fontSize:13, fontWeight:300, color:'#9A9080' }}>No searches yet — <a href="/scan" style={{ color:'#1A1612' }}>start scanning</a>.</p>
+          ) : (
+            history.slice(0, 5).map((item, i) => (
+              <div key={i} className="history-item">
+                <div>
+                  <div style={{ fontSize:13, fontWeight:400, color:'#1A1612' }}>{item.query}</div>
+                  <div style={{ fontSize:11, fontWeight:300, color:'#9A9080', marginTop:2 }}>
+                    {item.date ? new Date(item.date).toLocaleDateString('nl-NL', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : ''}
+                  </div>
+                </div>
+                <a href="/scan" style={{ fontSize:10, fontWeight:400, letterSpacing:'.1em', textTransform:'uppercase', color:'#9A9080', textDecoration:'none' }}>
+                  Scan again →
+                </a>
               </div>
-              <div style="padding:32px 36px;background:#fff;">
-                <p style="font-size:14px;color:#7A7268;font-weight:300;margin:0 0 4px;">Hi ${name || 'there'},</p>
-                <h1 style="font-size:22px;font-weight:300;color:#1A1612;margin:0 0 12px;">Your account has been deleted.</h1>
-                <div style="background:#FDF0EE;border:1px solid #E8C8C0;border-radius:2px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#8A3A30;line-height:1.5;font-weight:300;">Your account and all associated data have been permanently removed from Gemly. This cannot be undone.</div>
-                <p style="font-size:14px;color:#7A7268;line-height:1.7;font-weight:300;">We're sorry to see you go. If you deleted your account by mistake, you're always welcome to create a new account.</p>
-                <a href="https://gemly.org/login" style="display:inline-block;background:transparent;color:#8A3A30;font-size:11px;font-weight:400;letter-spacing:.16em;text-transform:uppercase;padding:12px 24px;border-radius:2px;border:1px solid #E8C8C0;text-decoration:none;margin:8px 0 20px;">Create a new account →</a>
-                <hr style="border:none;border-top:1px solid #EDEAE4;margin:20px 0;">
-                <p style="font-size:12px;color:#9A9080;line-height:1.6;font-weight:300;">If you didn't request this deletion, please contact us immediately by replying to this email.</p>
-              </div>
-              <div style="background:#F9F7F4;padding:16px 36px;border-top:1px solid #EDEAE4;">
-                <p style="font-size:11px;color:#9A9080;margin:0;line-height:1.6;font-weight:300;">This is a transactional email sent because your Gemly account was deleted.</p>
+            ))
+          )}
+        </div>
+
+        <div className="section">
+          <span className="section-label">Account</span>
+          <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+            <input style={inp} type="text" value={user?.user_metadata?.full_name || ''} readOnly placeholder="Full name" />
+            <input style={inp} type="email" value={user?.email || profile?.email || ''} readOnly />
+            <input style={inp} type="text" value={user?.user_metadata?.country || ''} readOnly placeholder="Country" />
+          </div>
+        </div>
+
+        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          <button style={btnGhost} onClick={handleSignOut}>Sign out</button>
+          {!showDeleteConfirm ? (
+            <button style={btnDanger} onClick={() => setShowDeleteConfirm(true)}>Delete account</button>
+          ) : (
+            <div style={{ background:'#FDF0EE', border:'1px solid #E8C8C0', borderRadius:2, padding:'1rem', display:'flex', flexDirection:'column', gap:10 }}>
+              <p style={{ fontSize:13, fontWeight:300, color:'#8A3A30', lineHeight:1.6 }}>
+                Are you sure? This permanently deletes your account and all data.
+              </p>
+              <div style={{ display:'flex', gap:8 }}>
+                <button style={{ ...btnDanger, flex:1, width:'auto' }} onClick={handleDeleteAccount} disabled={deleting}>
+                  {deleting ? 'Deleting…' : 'Yes, delete everything'}
+                </button>
+                <button style={{ ...btnGhost, flex:1, width:'auto' }} onClick={() => setShowDeleteConfirm(false)}>
+                  Cancel
+                </button>
               </div>
             </div>
-          `,
-        });
-      } catch (e) {
-        console.error('deletion email failed (non-fatal):', e?.message);
-      }
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
