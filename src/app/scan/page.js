@@ -15,6 +15,31 @@ const saveSearch = async (query) => {
   } catch {}
 };
 
+// Logt een klik op een shop-aanbeveling naar /api/log-shop-click.
+// Fire-and-forget: vertraagt of blokkeert de doorverwijzing nooit.
+const logShopClick = async (shop, itemName, city) => {
+  try {
+    let userId = null;
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id || null;
+    } catch {}
+    fetch('/api/log-shop-click', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      keepalive: true,
+      body: JSON.stringify({
+        shop_name: shop?.name || 'Unknown shop',
+        shop_city: city || null,
+        user_id: userId,
+        scan_query: itemName || null,
+        source: 'scan',
+      }),
+    });
+  } catch {}
+};
+
 const sortByPrice = (listings) => {
   return [...listings].sort((a, b) => {
     const getNum = p => parseFloat((p || "").replace(/[^0-9.,]/g, "").replace(",", ".")) || 99999;
@@ -1036,7 +1061,7 @@ export default function ScanPage() {
                       <span className={"tag "+(condition!=="new"?"g":"")}>{condition==="new"?"Retail":"Physical store"}</span>
                       {s.address&&<span className="tag">{s.address}</span>}
                     </div>
-                    {s.url&&<a href={s.url} className="shop-btn" target="_blank" rel="noopener noreferrer">Visit website →</a>}
+                    {s.url&&<a href={s.url} className="shop-btn" target="_blank" rel="noopener noreferrer" onClick={()=>logShopClick(s, identifiedItem, userLocation?.city || userLocation?.country || null)}>Visit website →</a>}
                   </div>
                 </div>
               </div>
