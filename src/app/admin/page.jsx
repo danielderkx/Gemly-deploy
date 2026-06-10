@@ -26,6 +26,7 @@ export default function AdminPage() {
   const [pwError, setPwError] = useState(false);
   const [users, setUsers] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [clicks, setClicks] = useState({ total: 0, per_shop: [], recent: [] });
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState('users');
   const [sortBy, setSortBy] = useState('total_searches');
@@ -39,12 +40,14 @@ export default function AdminPage() {
   const loadData = async () => {
     setLoading(true);
     const supabase = createClient();
-    const [usersRes, { data: o }] = await Promise.all([
+    const [usersRes, { data: o }, clicksRes] = await Promise.all([
       fetch('/api/admin/users').then(r => r.json()),
       supabase.from('orders').select('*').order('created_at', { ascending: false }),
+      fetch('/api/log-shop-click').then(r => r.json()).catch(() => null),
     ]);
     setUsers(usersRes.users || []);
     setOrders(o || []);
+    setClicks(clicksRes && !clicksRes.error ? clicksRes : { total: 0, per_shop: [], recent: [] });
     setLoading(false);
   };
 
@@ -103,6 +106,17 @@ export default function AdminPage() {
     .slice(0, 15);
   const maxQueryCount = topQueries[0]?.count || 1;
   // -------------------------------------------------------------------------
+
+  // ---- CLICKS: shop-kliks uit /api/log-shop-click ----
+  const perShop = clicks.per_shop || [];
+  const maxShopCount = perShop[0]?.count || 1;
+  const recentClicks = clicks.recent || [];
+  const userLabel = (id) => {
+    if (!id) return null;
+    const u = users.find(x => x.id === id);
+    return u?.full_name || u?.email || null;
+  };
+  // ----------------------------------------------------
 
   const Arrow = ({ col }) => (
     <span style={{ color: sortBy === col ? '#1A1612' : '#C8C0B4', fontSize: 10, marginLeft: 4 }}>
@@ -176,7 +190,7 @@ export default function AdminPage() {
             { label: 'Total users', value: users.length, sub: 'registered' },
             { label: 'Active', value: users.filter(u => u.total_searches > 0).length, sub: '≥1 search done' },
             { label: 'Via referral', value: users.filter(u => u.referred_by).length, sub: 'referred signups' },
-            { label: 'Total searches', value: totalSearches, sub: 'all time' },
+            { label: 'Shop clicks', value: clicks.total || 0, sub: 'B2B referral proof' },
           ].map(({ label, value, sub }) => (
             <div key={label} style={{ background: '#fff', border: '1px solid #EDEAE4', borderRadius: 2, padding: '1rem 1.25rem' }}>
               <div style={{ fontSize: 10, fontWeight: 400, letterSpacing: '.16em', textTransform: 'uppercase', color: '#9A9080', marginBottom: 6 }}>{label}</div>
@@ -207,9 +221,9 @@ export default function AdminPage() {
         </div>
 
         <div style={{ display: 'flex', gap: 6, marginBottom: '1rem' }}>
-          {['users', 'orders', 'scans'].map(t => (
+          {['users', 'orders', 'scans', 'clicks'].map(t => (
             <button key={t} onClick={() => setTab(t)} style={{ background: tab === t ? '#1A1612' : '#fff', color: tab === t ? '#fff' : '#9A9080', border: '1px solid', borderColor: tab === t ? '#1A1612' : '#EDEAE4', borderRadius: 2, padding: '7px 18px', fontSize: 11, fontFamily: "'Outfit',sans-serif", fontWeight: 400, letterSpacing: '.14em', textTransform: 'uppercase', cursor: 'pointer' }}>
-              {t === 'users' ? `Users (${users.length})` : t === 'orders' ? `Orders (${orders.length})` : `Scans (${allScans.length})`}
+              {t === 'users' ? `Users (${users.length})` : t === 'orders' ? `Orders (${orders.length})` : t === 'scans' ? `Scans (${allScans.length})` : `Clicks (${clicks.total || 0})`}
             </button>
           ))}
         </div>
@@ -306,7 +320,7 @@ export default function AdminPage() {
               </tbody>
             </table>
           </div>
-        ) : (
+        ) : tab === 'scans' ? (
           <div>
             <div style={{ background: '#fff', border: '1px solid #EDEAE4', borderRadius: 2, padding: '1.25rem 1.5rem', marginBottom: '1.5rem' }}>
               <div style={{ fontSize: 10, fontWeight: 400, letterSpacing: '.16em', textTransform: 'uppercase', color: '#9A9080', marginBottom: '1rem' }}>Most searched items</div>
@@ -345,6 +359,55 @@ export default function AdminPage() {
                     </tr>
                   ))}
                   {recentScans.length === 0 && <tr><td colSpan={2} style={{ padding: '2rem', textAlign: 'center', color: '#9A9080', fontSize: 13 }}>No scans yet.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <div style={{ background: '#fff', border: '1px solid #EDEAE4', borderRadius: 2, padding: '1.25rem 1.5rem', marginBottom: '1.5rem' }}>
+              <div style={{ fontSize: 10, fontWeight: 400, letterSpacing: '.16em', textTransform: 'uppercase', color: '#9A9080', marginBottom: '1rem' }}>Clicks per shop</div>
+              {perShop.length === 0 ? (
+                <p style={{ fontSize: 13, color: '#C8C0B4', fontWeight: 300 }}>No shop clicks yet. They appear here as soon as users click "Visit website" on a shop recommendation.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {perShop.map(({ shop_name, count }) => (
+                    <div key={shop_name} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ flex: 1, fontSize: 13, fontWeight: 300, color: '#1A1612', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{shop_name}</div>
+                      <div style={{ width: 160, height: 6, background: '#F5F0E8', borderRadius: 1, overflow: 'hidden', flexShrink: 0 }}>
+                        <div style={{ width: `${(count / maxShopCount) * 100}%`, height: '100%', background: '#5A7A5A', borderRadius: 1, transition: 'width .4s' }} />
+                      </div>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: '#1A1612', width: 28, textAlign: 'right', flexShrink: 0 }}>{count}×</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{ background: '#fff', border: '1px solid #EDEAE4', borderRadius: 2, overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #EDEAE4', background: '#FAFAF8' }}>
+                    <th className="th">Shop</th>
+                    <th className="th">Scanned item</th>
+                    <th className="th">City</th>
+                    <th className="th">User</th>
+                    <th className="th">When</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentClicks.map((c, i) => (
+                    <tr key={c.id || i} className="tr">
+                      <td className="td" style={{ fontWeight: 400 }}>{c.shop_name}</td>
+                      <td className="td" style={{ color: '#9A9080' }}>{c.scan_query || <span style={{ color: '#C8C0B4' }}>—</span>}</td>
+                      <td className="td" style={{ color: '#9A9080', fontSize: 12 }}>{c.shop_city || <span style={{ color: '#C8C0B4' }}>—</span>}</td>
+                      <td className="td" style={{ color: '#9A9080', fontSize: 12 }}>{userLabel(c.user_id) || <span style={{ color: '#C8C0B4' }}>Anonymous</span>}</td>
+                      <td className="td" style={{ color: '#9A9080', fontSize: 12, whiteSpace: 'nowrap' }}>
+                        {c.created_at ? new Date(c.created_at).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                  {recentClicks.length === 0 && <tr><td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: '#9A9080', fontSize: 13 }}>No shop clicks yet.</td></tr>}
                 </tbody>
               </table>
             </div>
