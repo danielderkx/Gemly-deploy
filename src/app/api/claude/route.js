@@ -95,7 +95,7 @@ const SYSTEM_TEXT = "You are Gemly, an expert AI shopping assistant specializing
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { is_listing_search, search_query, ...anthropicBody } = body;
+    const { is_listing_search, search_query, scan_condition, scan_category, ...anthropicBody } = body;
 
     const isPaidCall = PAID_MODELS.includes(anthropicBody.model) && anthropicBody.tools?.length > 0;
 
@@ -159,6 +159,18 @@ export async function POST(request) {
           credits: profile.credits - CREDIT_COST,
           total_searches: (profile.total_searches || 0) + 1
         }).eq('id', user.id);
+
+        // --- Scan loggen (fire-and-forget) — alleen bij een echte listing-zoekopdracht.
+        // Vertraagt of breekt de zoekopdracht nooit; fouten worden stil genegeerd.
+        if (is_listing_search && search_query) {
+          supabase.from('scan_logs').insert({
+            user_id: user.id,
+            query: search_query,
+            condition: scan_condition || null,
+            category: scan_category || null,
+          }).then(() => {}, () => {});
+        }
+        // --- einde scan-logging ---
 
         data._credits_remaining = profile.credits - CREDIT_COST;
       }
