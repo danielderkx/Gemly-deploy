@@ -604,6 +604,7 @@ export default function ScanPage() {
             body: JSON.stringify({
               model:"claude-sonnet-4-6", max_tokens:1000,
               is_listing_search: true,
+              is_retry: true,
               search_query: activeQ,
               tools:[{ type:"web_search_20250305", name:"web_search", max_uses:3 }],
               messages:[{ role:"user", content: retryPrompt }]
