@@ -21,10 +21,10 @@ const PACKAGES = [
   },
   {
     name: 'Pro',
-    price: '€34,99',
+    price: '€39,99',
     searches: 100,
     priceId: 'price_1TjydAIHappXpeB7IHIVpoXL',
-    perSearch: '€0,35',
+    perSearch: '€0,40',
     highlight: false,
   },
 ];
