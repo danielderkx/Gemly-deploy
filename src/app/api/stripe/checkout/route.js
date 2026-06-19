@@ -6,15 +6,14 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Credits per price ID
 const CREDITS_MAP = {
-  'price_1TYoLOIy2dxBbN1tDEDjrvAo': 10,  // Starter €5,99
-  'price_1TYoMIIy2dxBbN1tMsacEGz0': 30,  // Plus €12,99
-  'price_1TY4ljIy2dxBbN1tUdUGl47a': 100, // Pro €34,99
+  'price_1TjyccIHappXpeB7OqkCa7J3': 10,  // Starter €6,99
+  'price_1TjycyIHappXpeB7tPyIvj4l': 30,  // Plus €14,99
+  'price_1TjydAIHappXpeB7IHIVpoXL': 100, // Pro €34,99
 };
 
 export async function POST(request) {
   try {
     const { priceId } = await request.json();
-
     if (!CREDITS_MAP[priceId]) {
       return Response.json({ error: 'Invalid price' }, { status: 400 });
     }
