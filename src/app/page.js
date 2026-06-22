@@ -17,7 +17,7 @@ const FAQS = [
   },
   {
     q: 'What does a search cost?',
-    a: 'You get 2 free searches when you sign up. After that, each search uses 1 credit. You can top up credits anytime, and inviting a friend earns you 3 extra credits.',
+    a: 'You get 3 free searches when you sign up. After that, each search uses 1 credit. You can top up credits anytime, and inviting a friend earns you 3 extra credits.',
   },
   {
     q: 'Is Gemly responsible for purchases?',
@@ -202,7 +202,7 @@ export default function LandingPage() {
       {/* CTA */}
       <div className="cta-section" style={{ background:'#1A1612', padding:'4rem 2.5rem', textAlign:'center' }}>
         <p style={{ fontSize:11, fontWeight:300, letterSpacing:'.25em', textTransform:'uppercase', color:'#4A4540', marginBottom:'1.5rem' }}>Get started today</p>
-        <h2 style={{ fontWeight:200, fontSize:'clamp(24px,4vw,48px)', color:'#F0EBE3', letterSpacing:'-.01em', marginBottom:'2rem' }}>2 free searches on signup.</h2>
+        <h2 style={{ fontWeight:200, fontSize:'clamp(24px,4vw,48px)', color:'#F0EBE3', letterSpacing:'-.01em', marginBottom:'2rem' }}>3 free searches on signup.</h2>
         <a href="/login" style={{ display:'inline-block', fontSize:11, fontWeight:300, letterSpacing:'.22em', textTransform:'uppercase', color:'#1A1612', background:'#F0EBE3', textDecoration:'none', padding:'14px 36px' }}>
           Create free account
         </a>
