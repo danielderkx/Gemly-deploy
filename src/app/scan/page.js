@@ -363,6 +363,7 @@ export default function ScanPage() {
   const [gender, setGender] = useState(null);
   const [credits, setCredits] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(null);
   const fileRef = useRef();
   const camRef = useRef();
 
@@ -370,7 +371,7 @@ export default function ScanPage() {
     detectLocation();
     const supabase = createClient();
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) window.location.href = '/login';
+      setIsLoggedIn(!!session);
     });
   }, []);
 
@@ -581,6 +582,9 @@ export default function ScanPage() {
       if (listingData?.error === "no_credits") {
         setStep("no_credits"); return;
       }
+      if (listingData?.error === "signup_required") {
+        setStep("signup_required"); return;
+      }
       if (listingData?._credits_remaining !== undefined) {
         setCredits(listingData._credits_remaining);
       }
@@ -674,6 +678,7 @@ export default function ScanPage() {
       });
       const data = await r.json();
       if (data?.error === "no_credits") { setStep("no_credits"); setLoadingMore(false); return; }
+      if (data?.error === "signup_required") { setStep("signup_required"); setLoadingMore(false); return; }
       if (data?._credits_remaining !== undefined) setCredits(data._credits_remaining);
       const txt = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
       const p = parseJSON(txt);
@@ -996,8 +1001,32 @@ export default function ScanPage() {
           </div>
         )}
 
+        {step==="signup_required"&&(
+          <div className="slide-in" style={{textAlign:"center",padding:"2rem 0"}}>
+            <div style={{fontSize:48,marginBottom:"1rem"}}>💎</div>
+            <p style={{fontSize:10,fontWeight:300,letterSpacing:".25em",textTransform:"uppercase",color:"#9A9080",marginBottom:".5rem"}}>You've used your free scan</p>
+            <h2 style={{fontSize:26,fontWeight:200,color:"#1A1612",marginBottom:".75rem",letterSpacing:"-.01em"}}>Create a free account</h2>
+            <p style={{fontSize:13,fontWeight:300,color:"#9A9080",marginBottom:"2rem",lineHeight:1.6}}>Sign up in seconds to keep scanning,<br/>save your finds and unlock more searches.</p>
+            <a href="/join" style={{display:"inline-block",background:"#1A1612",color:"#fff",fontSize:11,fontWeight:400,letterSpacing:".2em",textTransform:"uppercase",textDecoration:"none",padding:"13px 32px",marginBottom:"1rem"}}>
+              Create free account
+            </a>
+            <div style={{fontSize:12,color:"#9A9080",fontWeight:300}}>Already have one? <a href="/login" style={{color:"#1A1612"}}>Log in</a></div>
+            <div style={{marginTop:"1rem"}}><button className="rescan" onClick={reset}>← Start over</button></div>
+          </div>
+        )}
+
         {step==="results"&&(
           <div className="slide-in">
+            {isLoggedIn===false&&(
+              <div style={{background:"#F0F5F0",border:"1px solid #C8D8C8",borderRadius:2,padding:".85rem 1rem",marginBottom:"1rem",display:"flex",gap:10,alignItems:"center"}}>
+                <span style={{fontSize:16,flexShrink:0}}>💎</span>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:12,fontWeight:400,color:"#1A1612",marginBottom:2}}>This is your free scan</div>
+                  <div style={{fontSize:12,color:"#5A7A5A",fontWeight:300,lineHeight:1.4}}>Create a free account to save your finds and keep scanning.</div>
+                </div>
+                <a href="/join" style={{flexShrink:0,background:"#1A1612",color:"#fff",fontSize:10,fontWeight:400,letterSpacing:".12em",textTransform:"uppercase",textDecoration:"none",padding:"8px 14px",borderRadius:1}}>Sign up</a>
+              </div>
+            )}
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:"0.5rem"}}>
               <div>
                 <span className="lbl" style={{marginBottom:2}}>Results for</span>
@@ -1039,7 +1068,7 @@ export default function ScanPage() {
               style={{width:"100%",background:"none",border:"1px solid #EDEAE4",borderRadius:2,padding:".75rem",fontSize:11,fontFamily:"'Outfit',sans-serif",fontWeight:400,color:loadingMore?"#C8C0B4":"#9A9080",cursor:loadingMore?"not-allowed":"pointer",letterSpacing:".14em",textTransform:"uppercase",marginBottom:".85rem",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}
               onMouseEnter={e=>{if(!loadingMore){e.currentTarget.style.borderColor="#1A1612";e.currentTarget.style.color="#1A1612";}}}
               onMouseLeave={e=>{e.currentTarget.style.borderColor="#EDEAE4";e.currentTarget.style.color=loadingMore?"#C8C0B4":"#9A9080";}}>
-              {loadingMore?<><div style={{width:11,height:11,border:"1px solid #EDEAE4",borderTopColor:"#1A1612",borderRadius:"50%",animation:"spin 1s linear infinite"}}/> Searching…</>:<>↻ Show 3 new results · 1 token</>}
+              {loadingMore?<><div style={{width:11,height:11,border:"1px solid #EDEAE4",borderTopColor:"#1A1612",borderRadius:"50%",animation:"spin 1s linear infinite"}}/> Searching…</>:<>↻ Show 3 new results{credits!==null?" · 1 token":""}</>}
             </button>
             <div className="divgem"><span className="gem">{condition==="new"?"🏪":"💎"}</span></div>
             <div className="sec-title"><span>{condition==="new"?"Physical stores":"Hidden gem shops"}</span></div>
