@@ -4,6 +4,16 @@ import { cookies } from 'next/headers';
 const PAID_MODELS = ['claude-sonnet-4-5', 'claude-sonnet-4-6'];
 const CREDIT_COST = 1;
 
+// Aantal gratis scans dat een niet-ingelogde bezoeker per IP per 24u mag doen.
+const ANON_FREE_SCANS = 1;
+
+// Haalt het client-IP uit de request headers (Vercel zet x-forwarded-for).
+const getClientIp = (request) => {
+  const xff = request.headers.get('x-forwarded-for');
+  if (xff) return xff.split(',')[0].trim();
+  return request.headers.get('x-real-ip') || 'unknown';
+};
+
 // LAAG 1 — URL patroon validatie per platform (alleen voor secondhand marktplaatsen)
 const URL_PATTERNS = {
   'ebay':          [/ebay\.(com|nl|de|fr|co\.uk|es|it)\/itm\/\d+/, /ebay\.(com|nl|de|fr|co\.uk|es|it)\/p\//],
@@ -92,12 +102,24 @@ const injectValidatedListings = (data, validatedListings) => {
 
 const SYSTEM_TEXT = "You are Gemly, an expert AI shopping assistant specializing in fashion, sneakers, luxury goods, and vintage items. You help users find the best deals on secondhand and new items across platforms like eBay, Vinted, Grailed, StockX, Vestiaire Collective, Depop, and Marktplaats, as well as official retail webshops for brand new items. Always return valid JSON only, no markdown, no explanation. Only return real URLs from search results.";
 
+const ANTHROPIC_HEADERS = {
+  "Content-Type": "application/json",
+  "x-api-key": process.env.ANTHROPIC_API_KEY,
+  "anthropic-version": "2023-06-01",
+  "anthropic-beta": "web-search-2025-03-05,prompt-caching-2024-07-31",
+};
+
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { is_listing_search, search_query, scan_condition, scan_category, ...anthropicBody } = body;
+    // is_retry wordt hier OOK uit de body gehaald zodat hij nooit naar Anthropic lekt.
+    const { is_listing_search, is_retry, search_query, scan_condition, scan_category, ...anthropicBody } = body;
 
     const isPaidCall = PAID_MODELS.includes(anthropicBody.model) && anthropicBody.tools?.length > 0;
+
+    // Alleen de ECHTE hoofdscan kost een credit. Retry en shop-call horen bij
+    // dezelfde scan en zijn gratis.
+    const isMainScan = is_listing_search && !is_retry;
 
     if (isPaidCall) {
       const cookieStore = await cookies();
@@ -107,18 +129,93 @@ export async function POST(request) {
         { cookies: { getAll: () => cookieStore.getAll() } }
       );
 
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        return Response.json({ error: 'not_authenticated', message: 'Please log in to search.' }, { status: 401 });
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // ---------------------------------------------------------------
+      // ANONIEME BEZOEKER (geen account): 1 gratis scan per IP per 24u.
+      // Raakt credits / profiles / auth-trigger NIET aan.
+      // ---------------------------------------------------------------
+      if (!user) {
+        const ip = getClientIp(request);
+
+        if (isMainScan) {
+          // Hoofdscan: tel hoeveel gratis scans dit IP in de laatste 24u deed.
+          const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+          const { count } = await supabase
+            .from('anon_scans')
+            .select('id', { count: 'exact', head: true })
+            .eq('ip', ip)
+            .gte('scanned_at', since24h);
+          if ((count || 0) >= ANON_FREE_SCANS) {
+            return Response.json(
+              { error: 'signup_required', message: 'Create a free account to keep scanning.' },
+              { status: 403 }
+            );
+          }
+        } else {
+          // Retry- of shop-call: alleen toegestaan als onderdeel van een net
+          // gestarte gratis scan vanaf dit IP (voorkomt directe endpoint-misbruik).
+          const since10m = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+          const { count: recent } = await supabase
+            .from('anon_scans')
+            .select('id', { count: 'exact', head: true })
+            .eq('ip', ip)
+            .gte('scanned_at', since10m);
+          if ((recent || 0) < 1) {
+            return Response.json(
+              { error: 'signup_required', message: 'Create a free account to keep scanning.' },
+              { status: 403 }
+            );
+          }
+        }
+
+        if (!anthropicBody.system && anthropicBody.messages?.length > 0) {
+          anthropicBody.system = [{ type: "text", text: SYSTEM_TEXT, cache_control: { type: "ephemeral" } }];
+        }
+
+        const response = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: ANTHROPIC_HEADERS,
+          body: JSON.stringify(anthropicBody),
+        });
+
+        let data = await response.json();
+
+        if (response.ok && !data.error) {
+          if (is_listing_search) {
+            const textBlock = (data.content || []).find(b => b.type === 'text');
+            if (textBlock) {
+              try {
+                const text = textBlock.text;
+                const match = text.match(/\{[\s\S]*"listings"[\s\S]*\}/);
+                const parsed = match ? JSON.parse(match[0]) : JSON.parse(text);
+                if (parsed?.listings?.length) {
+                  const validated = await validateListings(parsed.listings, search_query || '');
+                  data = injectValidatedListings(data, validated);
+                }
+              } catch {}
+            }
+          }
+          // Pas NA een geslaagde hoofdscan de gratis-scan teller bijwerken.
+          if (isMainScan) {
+            await supabase.from('anon_scans').insert({ ip });
+          }
+        }
+
+        return Response.json(data, { status: response.status });
       }
 
+      // ---------------------------------------------------------------
+      // INGELOGDE GEBRUIKER.
+      // ---------------------------------------------------------------
       const { data: profile, error: profileError } = await supabase
        .from('profiles').select('credits, total_searches').eq('id', user.id).single();
 
       if (profileError || !profile) {
         return Response.json({ error: 'profile_error', message: 'Could not load your profile.' }, { status: 500 });
       }
-      if (profile.credits < CREDIT_COST) {
+      // Alleen de hoofdscan vereist credits; retry en shop-call zijn gratis.
+      if (isMainScan && profile.credits < CREDIT_COST) {
         return Response.json({ error: 'no_credits', message: 'You have no searches left.', credits: 0 }, { status: 402 });
       }
 
@@ -128,12 +225,7 @@ export async function POST(request) {
 
       const response = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": process.env.ANTHROPIC_API_KEY,
-          "anthropic-version": "2023-06-01",
-          "anthropic-beta": "web-search-2025-03-05,prompt-caching-2024-07-31",
-        },
+        headers: ANTHROPIC_HEADERS,
         body: JSON.stringify(anthropicBody),
       });
 
@@ -155,24 +247,27 @@ export async function POST(request) {
           }
         }
 
-        await supabase.from('profiles').update({
-          credits: profile.credits - CREDIT_COST,
-          total_searches: (profile.total_searches || 0) + 1
-        }).eq('id', user.id);
+        // Credit aftrekken + scan loggen: UITSLUITEND bij de echte hoofdscan.
+        // Retry en shop-call kosten niets en worden niet dubbel gelogd.
+        if (isMainScan) {
+          await supabase.from('profiles').update({
+            credits: profile.credits - CREDIT_COST,
+            total_searches: (profile.total_searches || 0) + 1
+          }).eq('id', user.id);
 
-        // --- Scan loggen (fire-and-forget) — alleen bij een echte listing-zoekopdracht.
-        // Vertraagt of breekt de zoekopdracht nooit; fouten worden stil genegeerd.
-        if (is_listing_search && search_query) {
-          supabase.from('scan_logs').insert({
-            user_id: user.id,
-            query: search_query,
-            condition: scan_condition || null,
-            category: scan_category || null,
-          }).then(() => {}, () => {});
+          if (search_query) {
+            supabase.from('scan_logs').insert({
+              user_id: user.id,
+              query: search_query,
+              condition: scan_condition || null,
+              category: scan_category || null,
+            }).then(() => {}, () => {});
+          }
+
+          data._credits_remaining = profile.credits - CREDIT_COST;
+        } else {
+          data._credits_remaining = profile.credits;
         }
-        // --- einde scan-logging ---
-
-        data._credits_remaining = profile.credits - CREDIT_COST;
       }
 
       return Response.json(data, { status: response.status });
@@ -185,12 +280,7 @@ export async function POST(request) {
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "anthropic-beta": "web-search-2025-03-05,prompt-caching-2024-07-31",
-      },
+      headers: ANTHROPIC_HEADERS,
       body: JSON.stringify(anthropicBody),
     });
 
