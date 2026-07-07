@@ -2,6 +2,10 @@
 import { useState, useRef, useEffect } from "react";
 import { createClient } from '../../lib/supabase';
 
+// Number of free scans a new account receives (shown in the signup banner).
+// Must match the welcome grant set in the Supabase auth trigger.
+const FREE_SCANS_ON_SIGNUP = 3;
+
 const saveSearch = async (query) => {
   try {
     const supabase = createClient();
@@ -1018,13 +1022,13 @@ export default function ScanPage() {
         {step==="results"&&(
           <div className="slide-in">
             {isLoggedIn===false&&(
-              <div style={{background:"#F0F5F0",border:"1px solid #C8D8C8",borderRadius:2,padding:".85rem 1rem",marginBottom:"1rem",display:"flex",gap:10,alignItems:"center"}}>
-                <span style={{fontSize:16,flexShrink:0}}>💎</span>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:12,fontWeight:400,color:"#1A1612",marginBottom:2}}>This is your free scan</div>
-                  <div style={{fontSize:12,color:"#5A7A5A",fontWeight:300,lineHeight:1.4}}>Create a free account to save your finds and keep scanning.</div>
-                </div>
-                <a href="/join" style={{flexShrink:0,background:"#1A1612",color:"#fff",fontSize:10,fontWeight:400,letterSpacing:".12em",textTransform:"uppercase",textDecoration:"none",padding:"8px 14px",borderRadius:1}}>Sign up</a>
+              <div style={{background:"#F7F1E8",border:"1px solid #E8DFD0",borderRadius:2,padding:"1.5rem 1.25rem",marginBottom:"1.25rem",textAlign:"center"}}>
+                <div style={{fontSize:22,marginBottom:".5rem"}}>💎</div>
+                <div style={{fontSize:10,fontWeight:300,letterSpacing:".25em",textTransform:"uppercase",color:"#9A9080",marginBottom:".4rem"}}>This was your free scan</div>
+                <div style={{fontSize:21,fontWeight:200,color:"#1A1612",letterSpacing:"-.01em",marginBottom:".4rem"}}>Want to keep scanning for free?</div>
+                <div style={{fontSize:13,fontWeight:300,color:"#9A9080",lineHeight:1.5,marginBottom:"1.1rem"}}>Create a free account and get {FREE_SCANS_ON_SIGNUP} more scans — no card needed.</div>
+                <a href="/join" style={{display:"inline-block",background:"#1A1612",color:"#fff",fontSize:11,fontWeight:400,letterSpacing:".2em",textTransform:"uppercase",textDecoration:"none",padding:"13px 32px"}}>Get {FREE_SCANS_ON_SIGNUP} free scans</a>
+                <div style={{fontSize:11,color:"#9A9080",fontWeight:300,marginTop:".7rem"}}>Already have an account? <a href="/login" style={{color:"#1A1612"}}>Log in</a></div>
               </div>
             )}
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:"0.5rem"}}>
